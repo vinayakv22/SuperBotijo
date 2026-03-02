@@ -15,6 +15,7 @@ import {
   X,
 } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
+import { SessionApiResponse } from "@/types/session";
 
 interface Agent {
   id: string;
@@ -48,7 +49,7 @@ export function FleetSidebar({ isOpen, onToggle }: FleetSidebarProps) {
         const res = await fetch("/api/sessions");
         const data = await res.json();
         
-        const mappedAgents: Agent[] = (data.sessions || []).map((s: any) => ({
+        const mappedAgents: Agent[] = ((data.sessions as SessionApiResponse[]) || []).map((s) => ({
           id: s.id,
           key: s.key,
           type: s.type || "unknown",

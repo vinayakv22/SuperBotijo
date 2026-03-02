@@ -11,7 +11,9 @@ import {
   type ChannelName,
   CHANNELS,
   type RealtimeEvent,
-} from '@/lib/realtime-events';
+  type ActivityNewPayload,
+  type NotificationPayload,
+} from "@/lib/realtime-events";
 
 interface UseRealtimeOptions {
   enabled?: boolean;
@@ -283,13 +285,13 @@ export function useRealtime(options: UseRealtimeOptions = {}): UseRealtimeReturn
 
 // Export a simpler hook for just activities
 export function useRealtimeActivities(
-  onNewActivity?: (activity: any) => void
+  onNewActivity?: (activity: ActivityNewPayload) => void
 ) {
   return useRealtime({
     channels: [CHANNELS.ACTIVITIES],
     onEvent: (type, payload) => {
-      if (type === 'activity:new' && onNewActivity) {
-        onNewActivity(payload);
+      if (type === "activity:new" && onNewActivity) {
+        onNewActivity(payload as ActivityNewPayload);
       }
     },
   });
@@ -297,13 +299,13 @@ export function useRealtimeActivities(
 
 // Export a hook for notifications
 export function useRealtimeNotifications(
-  onNewNotification?: (notification: any) => void
+  onNewNotification?: (notification: NotificationPayload) => void
 ) {
   return useRealtime({
     channels: [CHANNELS.NOTIFICATIONS],
     onEvent: (type, payload) => {
-      if (type === 'notification:new' && onNewNotification) {
-        onNewNotification(payload);
+      if (type === "notification:new" && onNewNotification) {
+        onNewNotification(payload as NotificationPayload);
       }
     },
   });
