@@ -11,10 +11,12 @@ export interface ModelPricing {
   inputPricePerMillion: number;
   outputPricePerMillion: number;
   contextWindow: number;
+  cacheReadPricePerMillion?: number;
+  cacheWritePricePerMillion?: number;
 }
 
 export const MODEL_PRICING: ModelPricing[] = [
-  // Anthropic models
+  // Anthropic models (with prompt caching support)
   {
     id: "anthropic/claude-opus-4-6",
     name: "Opus 4.6",
@@ -22,6 +24,8 @@ export const MODEL_PRICING: ModelPricing[] = [
     inputPricePerMillion: 15.00,
     outputPricePerMillion: 75.00,
     contextWindow: 200000,
+    cacheReadPricePerMillion: 1.50,
+    cacheWritePricePerMillion: 18.75,
   },
   {
     id: "anthropic/claude-sonnet-4-5",
@@ -30,6 +34,8 @@ export const MODEL_PRICING: ModelPricing[] = [
     inputPricePerMillion: 3.00,
     outputPricePerMillion: 15.00,
     contextWindow: 200000,
+    cacheReadPricePerMillion: 0.30,
+    cacheWritePricePerMillion: 3.75,
   },
   {
     id: "anthropic/claude-haiku-3-5",
@@ -38,6 +44,8 @@ export const MODEL_PRICING: ModelPricing[] = [
     inputPricePerMillion: 0.80,
     outputPricePerMillion: 4.00,
     contextWindow: 200000,
+    cacheReadPricePerMillion: 0.08,
+    cacheWritePricePerMillion: 1.00,
   },
   // Google Gemini models
   {
@@ -81,7 +89,9 @@ export const MODEL_PRICING: ModelPricing[] = [
 export function calculateCost(
   modelId: string,
   inputTokens: number,
-  outputTokens: number
+  outputTokens: number,
+  cacheReadTokens?: number,
+  cacheWriteTokens?: number
 ): number {
   const pricing = MODEL_PRICING.find(
     (p) => p.id === modelId || p.alias === modelId
@@ -89,7 +99,6 @@ export function calculateCost(
 
   if (!pricing) {
     console.warn(`Unknown model: ${modelId}, using default pricing`);
-    // Default to Sonnet pricing if unknown
     return (
       (inputTokens / 1_000_000) * 3.0 + (outputTokens / 1_000_000) * 15.0
     );
@@ -97,8 +106,14 @@ export function calculateCost(
 
   const inputCost = (inputTokens / 1_000_000) * pricing.inputPricePerMillion;
   const outputCost = (outputTokens / 1_000_000) * pricing.outputPricePerMillion;
+  const cacheReadCost = cacheReadTokens && pricing.cacheReadPricePerMillion
+    ? (cacheReadTokens / 1_000_000) * pricing.cacheReadPricePerMillion
+    : 0;
+  const cacheWriteCost = cacheWriteTokens && pricing.cacheWritePricePerMillion
+    ? (cacheWriteTokens / 1_000_000) * pricing.cacheWritePricePerMillion
+    : 0;
 
-  return inputCost + outputCost;
+  return inputCost + outputCost + cacheReadCost + cacheWriteCost;
 }
 
 /**

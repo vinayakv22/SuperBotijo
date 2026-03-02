@@ -589,6 +589,8 @@ export default function AnalyticsPage() {
                         <th className="text-left py-3 px-4 text-sm font-medium" style={{ color: "var(--text-secondary)" }}>Model</th>
                         <th className="text-right py-3 px-4 text-sm font-medium" style={{ color: "var(--text-secondary)" }}>Input</th>
                         <th className="text-right py-3 px-4 text-sm font-medium" style={{ color: "var(--text-secondary)" }}>Output</th>
+                        <th className="text-right py-3 px-4 text-sm font-medium" style={{ color: "var(--text-secondary)" }}>Cache Read</th>
+                        <th className="text-right py-3 px-4 text-sm font-medium" style={{ color: "var(--text-secondary)" }}>Cache Write</th>
                         <th className="text-right py-3 px-4 text-sm font-medium" style={{ color: "var(--text-secondary)" }}>Context</th>
                       </tr>
                     </thead>
@@ -600,7 +602,13 @@ export default function AnalyticsPage() {
                           </td>
                           <td className="py-3 px-4 text-right" style={{ color: "var(--text-primary)" }}>${model.inputPricePerMillion}</td>
                           <td className="py-3 px-4 text-right" style={{ color: "var(--text-primary)" }}>${model.outputPricePerMillion}</td>
-                          <td className="py-3 px-4 text-right" style={{ color: "var(--text-secondary)" }}>{(model.contextWindow / 1000).toFixed(0)}k</td>
+                          <td className="py-3 px-4 text-right" style={{ color: "var(--text-secondary)" }}>
+                            {model.cacheReadPricePerMillion ? `$${model.cacheReadPricePerMillion}` : "-"}
+                          </td>
+                          <td className="py-3 px-4 text-right" style={{ color: "var(--text-secondary)" }}>
+                            {model.cacheWritePricePerMillion ? `$${model.cacheWritePricePerMillion}` : "-"}
+                          </td>
+                          <td className="py-3 px-4 text-right" style={{ color: "var(--text-muted)" }}>{(model.contextWindow / 1000).toFixed(0)}k</td>
                         </tr>
                       ))}
                     </tbody>
