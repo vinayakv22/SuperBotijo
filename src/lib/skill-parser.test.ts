@@ -175,4 +175,87 @@ This is the first paragraph that should become the description.
       expect(result?.files).not.toContain(".hidden");
     });
   });
+
+  describe("error handling", () => {
+    it("returns null when file read fails", () => {
+      // Create a skill directory with SKILL.md but make it unreadable
+      // Since we can't easily make it unreadable in test, we test with non-existent
+      const result = parseSkill("/non/existent/path", "test");
+      expect(result).toBeNull();
+    });
+
+    it("handles empty SKILL.md content", () => {
+      fs.writeFileSync(TEST_SKILL_MD, "");
+
+      const result = parseSkill(TEST_SKILL_PATH, "test-skill");
+
+      expect(result).not.toBeNull();
+      expect(result?.name).toBe("test-skill"); // Falls back to skillName
+    });
+
+    it("handles SKILL.md with only front matter", () => {
+      // The front matter regex requires content after closing ---
+      const content = "---\nname: Only Front Matter\ndescription: No body content\n---\n\n";
+      fs.writeFileSync(TEST_SKILL_MD, content);
+
+      const result = parseSkill(TEST_SKILL_PATH, "test-skill");
+
+      expect(result).not.toBeNull();
+      expect(result?.name).toBe("Only Front Matter");
+      expect(result?.description).toBe("No body content");
+    });
+
+    it("handles front matter without delimiters", () => {
+      const content = "# No Front Matter\n\nThis skill has no front matter at all.\nJust a simple description.";
+      fs.writeFileSync(TEST_SKILL_MD, content);
+
+      const result = parseSkill(TEST_SKILL_PATH, "test-skill");
+
+      expect(result).not.toBeNull();
+      expect(result?.name).toBe("test-skill"); // Falls back to skillName
+      expect(result?.description).toContain("simple description");
+    });
+
+    it("handles emoji in front matter", () => {
+      // Note: The parser expects JSON format for emoji, not YAML
+      const content = `---
+name: Emoji Skill
+description: A skill with emoji
+metadata: {"openclaw": {"emoji": "🚀"}}
+---
+
+# Emoji Skill
+
+This skill has an emoji in front matter.`;
+
+      fs.writeFileSync(TEST_SKILL_MD, content);
+
+      const result = parseSkill(TEST_SKILL_PATH, "test-skill");
+
+      expect(result).not.toBeNull();
+      expect(result?.emoji).toBe("🚀");
+    });
+  });
+
+  describe("workspace path detection", () => {
+    it("detects workspace source when path contains /workspace", () => {
+      // Create a path that includes /workspace
+      const workspaceRoot = path.join(process.cwd(), "data-test-workspace");
+      const workspaceSkillPath = path.join(workspaceRoot, "skills", "my-skill");
+      fs.mkdirSync(workspaceSkillPath, { recursive: true });
+      fs.writeFileSync(
+        path.join(workspaceSkillPath, "SKILL.md"),
+        "# Workspace Skill\n\nA workspace skill."
+      );
+
+      const result = parseSkill(workspaceSkillPath, "my-skill");
+
+      expect(result).not.toBeNull();
+      // The source should be 'workspace' because the path contains '/workspace'
+      expect(result?.source).toBe("workspace");
+
+      // Cleanup
+      fs.rmSync(workspaceRoot, { recursive: true });
+    });
+  });
 });
