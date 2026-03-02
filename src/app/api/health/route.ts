@@ -40,6 +40,34 @@ async function checkSystemdService(name: string): Promise<ServiceCheck> {
   }
 }
 
+async function checkProcessByPort(port: number, name: string): Promise<ServiceCheck> {
+  try {
+    const { stdout } = await execAsync(`ss -tlnp 2>/dev/null | grep :${port} || echo ""`);
+    const running = stdout.trim().length > 0;
+    return { 
+      name, 
+      status: running ? 'up' : 'down', 
+      details: running ? `listening on port ${port}` : `port ${port} not in use` 
+    };
+  } catch {
+    return { name, status: 'down', details: 'check failed' };
+  }
+}
+
+async function checkProcessByName(name: string, displayName: string): Promise<ServiceCheck> {
+  try {
+    const { stdout } = await execAsync(`pgrep -f "${name}" | head -1`);
+    const running = stdout.trim().length > 0;
+    return { 
+      name: displayName, 
+      status: running ? 'up' : 'down', 
+      details: running ? `PID: ${stdout.trim()}` : 'not running' 
+    };
+  } catch {
+    return { name: displayName, status: 'down', details: 'not running' };
+  }
+}
+
 async function checkPm2Service(name: string): Promise<ServiceCheck> {
   try {
     const { stdout } = await execAsync('pm2 jlist 2>/dev/null');
@@ -56,13 +84,13 @@ async function checkPm2Service(name: string): Promise<ServiceCheck> {
 export async function GET() {
   const checks: ServiceCheck[] = [];
 
-  // Internal services
+  // Internal services - check by port/process since systemd services may have wrong paths
   const [missionControl, gateway] = await Promise.all([
-    checkSystemdService('superbotijo'),
-    checkSystemdService('openclaw-gateway'),
+    checkProcessByPort(3000, 'superbotijo'),
+    checkProcessByPort(18789, 'openclaw-gateway'),
   ]);
-  checks.push({ ...missionControl, name: 'SuperBotijo' });
-  checks.push({ ...gateway, name: 'OpenClaw Gateway' });
+  checks.push(missionControl);
+  checks.push(gateway);
 
   // PM2 services
   const pm2Services = ['classvault', 'content-vault', 'brain'];

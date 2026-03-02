@@ -48,12 +48,12 @@ async function runAction(action: string): Promise<ActionResult> {
       }
 
       case 'restart-gateway': {
-        const { stdout, stderr } = await execAsync('systemctl restart openclaw-gateway 2>&1 || echo "Service not found"');
+        const { stdout, stderr } = await execAsync('sudo /usr/local/bin/openclaw-services gateway restart 2>&1');
         output = stdout || stderr || 'Restart command executed';
         // Also check status
         try {
-          const { stdout: status } = await execAsync('systemctl is-active openclaw-gateway 2>&1 || echo "unknown"');
-          output += `\nStatus: ${status.trim()}`;
+          const { stdout: status } = await execAsync('pgrep -f "openclaw-gateway" | head -1');
+          output += `\nStatus: ${status.trim() ? 'running' : 'stopped'}`;
         } catch {}
         break;
       }
