@@ -3,16 +3,26 @@
  */
 import type { OperationResult } from './index';
 import { getActivities } from '@/lib/activities-db';
+import { readFileSync, existsSync } from 'fs';
+import { join } from 'path';
+
+const OPENCLAW_DIR = process.env.OPENCLAW_DIR || '/home/daniel/.openclaw';
 
 export interface AgentInfo {
   id: string;
   name: string;
-  status: 'working' | 'idle' | 'error' | 'paused';
+  emoji: string;
+  color: string;
+  status: 'working' | 'idle' | 'error' | 'paused' | 'online' | 'offline';
   model: string;
   currentTask?: string;
   lastActivity?: string;
   tokensUsed: number;
   sessionCount: number;
+  botToken?: string;
+  allowAgents?: string[];
+  allowAgentsDetails?: { id: string; name: string; emoji: string; color: string }[];
+  dmPolicy?: string;
 }
 
 export interface AgentMood {
@@ -28,21 +38,84 @@ export interface AgentMood {
 const agentRegistry = new Map<string, AgentInfo>();
 const agentMoods = new Map<string, AgentMood>();
 
-// Initialize with default agent
-agentRegistry.set('superbotijo', {
-  id: 'superbotijo',
-  name: 'SuperBotijo',
-  status: 'idle',
-  model: 'claude-sonnet-4-20250514',
-  tokensUsed: 0,
-  sessionCount: 0,
-});
+// Default agent config
+const AGENT_DEFAULTS: Record<string, { emoji: string; color: string }> = {
+  boti: { emoji: '🤖', color: '#3b82f6' },
+  opencode: { emoji: '⚡', color: '#8b5cf6' },
+  memo: { emoji: '🧠', color: '#10b981' },
+  escapeitor: { emoji: '🔐', color: '#f59e0b' },
+  superbotijo: { emoji: '🫙', color: '#6366f1' },
+};
+
+/**
+ * Load agents from openclaw.json configuration
+ */
+function loadAgentsFromConfig(): AgentInfo[] {
+  const configPath = join(OPENCLAW_DIR, 'openclaw.json');
+  
+  if (!existsSync(configPath)) {
+    console.warn('[agent-ops] openclaw.json not found at', configPath);
+    return [];
+  }
+  
+  try {
+    const config = JSON.parse(readFileSync(configPath, 'utf-8'));
+    const agentsList = config.agents?.list || [];
+    
+    return agentsList.map((agent: { 
+      id: string; 
+      name?: string; 
+      model?: string;
+      subagents?: { allowAgents?: string[] };
+    }) => {
+      const defaults = AGENT_DEFAULTS[agent.id] || { emoji: '🤖', color: '#6b7280' };
+      const allowAgents = agent.subagents?.allowAgents || [];
+      
+      // Build allowAgentsDetails
+      const allowAgentsDetails = allowAgents.map((subId: string) => {
+        const subDefaults = AGENT_DEFAULTS[subId] || { emoji: '🤖', color: '#6b7280' };
+        return {
+          id: subId,
+          name: subId,
+          emoji: subDefaults.emoji,
+          color: subDefaults.color,
+        };
+      });
+      
+      return {
+        id: agent.id,
+        name: agent.name || agent.id,
+        emoji: defaults.emoji,
+        color: defaults.color,
+        status: 'offline' as const,
+        model: agent.model || 'unknown',
+        tokensUsed: 0,
+        sessionCount: 0,
+        allowAgents,
+        allowAgentsDetails,
+      };
+    });
+  } catch (error) {
+    console.error('[agent-ops] Error loading agents from config:', error);
+    return [];
+  }
+}
 
 /**
  * Get all registered agents
  */
 export async function getAgents(): Promise<OperationResult<AgentInfo[]>> {
   try {
+    // Load agents from openclaw.json
+    const configAgents = loadAgentsFromConfig();
+    
+    // Update registry with config agents
+    for (const agent of configAgents) {
+      if (!agentRegistry.has(agent.id)) {
+        agentRegistry.set(agent.id, agent);
+      }
+    }
+    
     return {
       success: true,
       data: Array.from(agentRegistry.values()),
@@ -272,7 +345,9 @@ export async function registerAgent(
       id,
       name,
       model,
-      status: 'idle',
+      emoji: "🤖",
+      color: "#3b82f6",
+      status: "idle",
       tokensUsed: 0,
       sessionCount: 0,
     };
