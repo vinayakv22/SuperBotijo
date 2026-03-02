@@ -83,9 +83,14 @@ function validateOverride(override: unknown, knownModelIds: Set<string>): { vali
   return { valid: errors.length === 0, errors };
 }
 
-export async function GET() {
+export async function GET(request: NextRequest) {
   try {
-    const models = getMergedPricing();
+    const url = new URL(request.url);
+    const filter = url.searchParams.get("filter");
+    
+    // Only filter by used models if explicitly requested
+    const filterByUsed = filter === "used";
+    const models = getMergedPricing(filterByUsed);
     const overrides = getPricingOverrides();
     const lastModified = getFileLastModified();
     

@@ -8,6 +8,7 @@ import { join } from "path";
  */
 
 const PRICING_PATH = join(process.cwd(), "data", "model-pricing.json");
+const OPENCLAW_DIR = process.env.OPENCLAW_DIR || "/home/daniel/.openclaw";
 
 export interface ModelPricing {
   id: string;
@@ -102,6 +103,32 @@ export const MODEL_PRICING: ModelPricing[] = [
 ];
 
 /**
+ * Normalize model ID (handle aliases and different formats)
+ */
+export function normalizeModelId(modelId: string): string {
+  // Handle short aliases and OpenClaw format (without provider prefix)
+  const aliasMap: Record<string, string> = {
+    // Short aliases
+    opus: "anthropic/claude-opus-4-6",
+    sonnet: "anthropic/claude-sonnet-4-5",
+    haiku: "anthropic/claude-haiku-3-5",
+    "gemini-flash": "google/gemini-2.5-flash",
+    "gemini-pro": "google/gemini-2.5-pro",
+    // OpenClaw format (without provider/)
+    "claude-opus-4-6": "anthropic/claude-opus-4-6",
+    "claude-sonnet-4-5": "anthropic/claude-sonnet-4-5",
+    "claude-haiku-3-5": "anthropic/claude-haiku-3-5",
+    "gemini-2.5-flash": "google/gemini-2.5-flash",
+    "gemini-2.5-pro": "google/gemini-2.5-pro",
+    // MiniMax
+    minimax: "minimax/minimax-m2.5",
+    "minimax-m2.5": "minimax/minimax-m2.5",
+  };
+
+  return aliasMap[modelId] || modelId;
+}
+
+/**
  * Read pricing overrides from data/model-pricing.json
  * @returns Array of pricing overrides, or empty array if file doesn't exist or is invalid
  */
@@ -132,36 +159,83 @@ export function getPricingOverrides(): PricingOverride[] {
 }
 
 /**
- * Merge default pricing with overrides
+ * Get list of model IDs currently used by agents in openclaw.json
+ * @returns Array of normalized model IDs
+ */
+export function getUsedModels(): string[] {
+  try {
+    const configPath = join(OPENCLAW_DIR, "openclaw.json");
+    if (!existsSync(configPath)) {
+      return [];
+    }
+    const config = JSON.parse(readFileSync(configPath, "utf-8"));
+    const agentsList = config.agents?.list || [];
+    const defaultModel = config.agents?.defaults?.model?.primary;
+    
+    const models = new Set<string>();
+    
+    // Add default model if configured
+    if (defaultModel) {
+      models.add(normalizeModelId(defaultModel));
+    }
+    
+    // Add each agent's model
+    for (const agent of agentsList) {
+      const model = agent.model?.primary || agent.model;
+      if (model) {
+        models.add(normalizeModelId(model));
+      }
+    }
+    
+    return [...models];
+  } catch (error) {
+    console.warn("Failed to read used models from openclaw.json:", error);
+    return [];
+  }
+}
+
+/**
+ * Merge default pricing with overrides, optionally filtering by used models
+ * @param filterByUsedModels - If true, only return models used by agents
  * @returns Array of merged pricing entries with isCustomized flags
  */
-export function getMergedPricing(): ModelPricingEntry[] {
+export function getMergedPricing(filterByUsedModels = false): ModelPricingEntry[] {
   const overrides = getPricingOverrides();
   const overrideMap = new Map<string, PricingOverride>();
   for (const o of overrides) {
     overrideMap.set(o.id, o);
   }
 
-  return MODEL_PRICING.map((defaultPricing): ModelPricingEntry => {
-    const override = overrideMap.get(defaultPricing.id);
-    if (!override) {
-      return { ...defaultPricing, isCustomized: false };
-    }
-    return {
-      ...defaultPricing,
-      inputPricePerMillion: override.inputPricePerMillion,
-      outputPricePerMillion: override.outputPricePerMillion,
-      cacheReadPricePerMillion: override.cacheReadPricePerMillion ?? defaultPricing.cacheReadPricePerMillion,
-      cacheWritePricePerMillion: override.cacheWritePricePerMillion ?? defaultPricing.cacheWritePricePerMillion,
-      isCustomized: true,
-      defaults: {
-        inputPricePerMillion: defaultPricing.inputPricePerMillion,
-        outputPricePerMillion: defaultPricing.outputPricePerMillion,
-        cacheReadPricePerMillion: defaultPricing.cacheReadPricePerMillion,
-        cacheWritePricePerMillion: defaultPricing.cacheWritePricePerMillion,
-      },
-    };
-  });
+  // Get used models if filtering is enabled
+  const usedModels = filterByUsedModels ? new Set(getUsedModels()) : null;
+
+  return MODEL_PRICING
+    .filter((defaultPricing) => {
+      // If not filtering, include all models
+      if (!usedModels) return true;
+      // Include if model ID is in used models
+      return usedModels.has(defaultPricing.id) || usedModels.has(defaultPricing.alias || "");
+    })
+    .map((defaultPricing): ModelPricingEntry => {
+      const override = overrideMap.get(defaultPricing.id);
+      if (!override) {
+        return { ...defaultPricing, isCustomized: false };
+      }
+      return {
+        ...defaultPricing,
+        inputPricePerMillion: override.inputPricePerMillion,
+        outputPricePerMillion: override.outputPricePerMillion,
+        cacheReadPricePerMillion: override.cacheReadPricePerMillion ?? defaultPricing.cacheReadPricePerMillion,
+        cacheWritePricePerMillion: override.cacheWritePricePerMillion ?? defaultPricing.cacheWritePricePerMillion,
+        isCustomized: true,
+        defaults: {
+          inputPricePerMillion: defaultPricing.inputPricePerMillion,
+          outputPricePerMillion: defaultPricing.outputPricePerMillion,
+          cacheReadPricePerMillion: defaultPricing.cacheReadPricePerMillion,
+          cacheWritePricePerMillion: defaultPricing.cacheWritePricePerMillion,
+        },
+      };
+    });
 }
 
 /**
@@ -207,30 +281,4 @@ export function getModelName(modelId: string): string {
     (p) => p.id === modelId || p.alias === modelId
   );
   return pricing?.name || modelId;
-}
-
-/**
- * Normalize model ID (handle aliases and different formats)
- */
-export function normalizeModelId(modelId: string): string {
-  // Handle short aliases and OpenClaw format (without provider prefix)
-  const aliasMap: Record<string, string> = {
-    // Short aliases
-    opus: "anthropic/claude-opus-4-6",
-    sonnet: "anthropic/claude-sonnet-4-5",
-    haiku: "anthropic/claude-haiku-3-5",
-    "gemini-flash": "google/gemini-2.5-flash",
-    "gemini-pro": "google/gemini-2.5-pro",
-    // OpenClaw format (without provider/)
-    "claude-opus-4-6": "anthropic/claude-opus-4-6",
-    "claude-sonnet-4-5": "anthropic/claude-sonnet-4-5",
-    "claude-haiku-3-5": "anthropic/claude-haiku-3-5",
-    "gemini-2.5-flash": "google/gemini-2.5-flash",
-    "gemini-2.5-pro": "google/gemini-2.5-pro",
-    // MiniMax
-    minimax: "minimax/minimax-m2.5",
-    "minimax-m2.5": "minimax/minimax-m2.5",
-  };
-
-  return aliasMap[modelId] || modelId;
 }
