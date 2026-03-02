@@ -60,7 +60,18 @@ export function cronToHuman(expr: string): string {
     return 'Every minute';
   }
 
-  // Every hour at specific minute
+  // Handle interval patterns (*/n) - MUST be before "every hour at minute" check
+  if (minute.startsWith('*/') && hour === '*' && dayOfMonth === '*' && month === '*' && dayOfWeek === '*') {
+    const interval = minute.slice(2);
+    return `Every ${interval} minutes`;
+  }
+
+  if (hour.startsWith('*/') && dayOfMonth === '*' && month === '*' && dayOfWeek === '*') {
+    const interval = hour.slice(2);
+    return `Every ${interval} hours`;
+  }
+
+  // Every hour at specific minute (e.g., "30 * * * *" = every hour at minute 30)
   if (minute !== '*' && hour === '*' && dayOfMonth === '*' && month === '*' && dayOfWeek === '*') {
     const minNum = parseInt(minute);
     if (minNum === 0) return 'Every hour on the hour';
@@ -97,17 +108,6 @@ export function cronToHuman(expr: string): string {
     const monthNum = parseInt(month) - 1;
     const suffix = getDaySuffix(dayNum);
     return `On ${MONTHS[monthNum]} ${dayNum}${suffix} at ${time}`;
-  }
-
-  // Handle interval patterns (*/n)
-  if (minute.startsWith('*/')) {
-    const interval = minute.slice(2);
-    return `Every ${interval} minutes`;
-  }
-
-  if (hour.startsWith('*/')) {
-    const interval = hour.slice(2);
-    return `Every ${interval} hours`;
   }
 
   // Default fallback
