@@ -57,3 +57,8 @@ next-env.d.ts
 
 # backup files
 *.bak
+
+# Temp files
+REVIEW-*.md
+dev.log
+test-results/
