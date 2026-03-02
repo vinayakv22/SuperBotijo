@@ -15,27 +15,29 @@ import {
   ReactFlowProvider,
 } from "@xyflow/react";
 import "@xyflow/react/dist/style.css";
-import { Search, Download, X, Filter, Users, Code, Lightbulb, Link2, Calendar } from "lucide-react";
-import type { EntityType, Entity, Relation, KnowledgeGraph } from "@/lib/memory-parser";
+import { Search, Download, X, Filter, Users, Code, Lightbulb, Link2, Calendar, Wrench, Target } from "lucide-react";
+import type { InferredType, ExtractedEntity, ExtractedRelation, KnowledgeGraph } from "@/lib/memory-parser";
 
-const TYPE_COLORS: Record<EntityType, string> = {
+const TYPE_COLORS: Record<InferredType, string> = {
   person: "#3b82f6",
   project: "#8b5cf6",
-  technology: "#10b981",
-  concept: "#f59e0b",
+  tool: "#f97316",
   resource: "#ef4444",
   date: "#6366f1",
+  concept: "#10b981",
+  action: "#f59e0b",
   location: "#ec4899",
 };
 
-const TYPE_ICONS: Record<EntityType, React.ReactNode> = {
-  person: <Users size={12} />,
-  project: <Code size={12} />,
-  technology: <Code size={12} />,
-  concept: <Lightbulb size={12} />,
-  resource: <Link2 size={12} />,
-  date: <Calendar size={12} />,
-  location: <Code size={12} />,
+const TYPE_LABELS: Record<InferredType, string> = {
+  person: "Person",
+  project: "Project",
+  tool: "Tool",
+  resource: "Resource",
+  date: "Date",
+  concept: "Concept",
+  action: "Action",
+  location: "Location",
 };
 
 interface KnowledgeGraphProps {
@@ -43,15 +45,14 @@ interface KnowledgeGraphProps {
 }
 
 interface SelectedNode {
-  entity: Entity;
-  connections: Array<{ entity: Entity; relation: Relation }>;
+  entity: ExtractedEntity;
+  connections: Array<{ entity: ExtractedEntity; relation: ExtractedRelation }>;
 }
 
-function CustomNode({ data }: { data: { entity: Entity; highlighted: boolean } }) {
+function CustomNode({ data }: { data: { entity: ExtractedEntity; highlighted: boolean } }) {
   const { entity, highlighted } = data;
   const color = TYPE_COLORS[entity.type];
-  const icon = TYPE_ICONS[entity.type];
-
+  
   return (
     <div
       style={{
@@ -71,7 +72,7 @@ function CustomNode({ data }: { data: { entity: Entity; highlighted: boolean } }
         maxWidth: "150px",
       }}
     >
-      <span style={{ opacity: 0.8 }}>{icon}</span>
+      <span style={{ opacity: 0.8, fontSize: "10px" }}>{entity.type[0].toUpperCase()}</span>
       <span
         style={{
           overflow: "hidden",
@@ -89,7 +90,7 @@ function CustomNode({ data }: { data: { entity: Entity; highlighted: boolean } }
             marginLeft: "2px",
           }}
         >
-          {entity.mentions}
+          ×{entity.mentions}
         </span>
       )}
     </div>
@@ -101,7 +102,7 @@ const nodeTypes = { custom: CustomNode };
 function GraphCanvas({ data }: KnowledgeGraphProps) {
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedNode, setSelectedNode] = useState<SelectedNode | null>(null);
-  const [activeFilters, setActiveFilters] = useState<Set<EntityType>>(new Set());
+  const [activeFilters, setActiveFilters] = useState<Set<InferredType>>(new Set());
   const { fitView } = useReactFlow();
 
   const filteredEntities = useMemo(() => {
@@ -111,7 +112,10 @@ function GraphCanvas({ data }: KnowledgeGraphProps) {
     }
     if (searchQuery) {
       const query = searchQuery.toLowerCase();
-      entities = entities.filter((e) => e.name.toLowerCase().includes(query));
+      entities = entities.filter((e) => 
+        e.name.toLowerCase().includes(query) || 
+        e.type.toLowerCase().includes(query)
+      );
     }
     return entities;
   }, [data.entities, activeFilters, searchQuery]);
@@ -128,7 +132,7 @@ function GraphCanvas({ data }: KnowledgeGraphProps) {
     const centerY = 300;
     const radius = 250;
 
-    const typeGroups = new Map<EntityType, Entity[]>();
+    const typeGroups = new Map<InferredType, ExtractedEntity[]>();
     filteredEntities.forEach((e) => {
       if (!typeGroups.has(e.type)) {
         typeGroups.set(e.type, []);
@@ -137,17 +141,18 @@ function GraphCanvas({ data }: KnowledgeGraphProps) {
     });
 
     let angleOffset = 0;
+    const typeCount = typeGroups.size || 1;
     typeGroups.forEach((entities) => {
       const typeAngle = angleOffset;
       entities.forEach((entity, i) => {
-        const angle = typeAngle + (i / entities.length) * (Math.PI * 2 / Array.from(typeGroups.keys()).length);
+        const angle = typeAngle + (i / entities.length) * (Math.PI * 2 / typeCount);
         const r = radius + (entity.mentions * 10);
         nodeMap.set(entity.id, {
           x: centerX + Math.cos(angle) * r,
           y: centerY + Math.sin(angle) * r,
         });
       });
-      angleOffset += Math.PI * 2 / Array.from(typeGroups.keys()).length;
+      angleOffset += Math.PI * 2 / typeCount;
     });
 
     const nodes: Node[] = filteredEntities.map((entity) => ({
@@ -203,14 +208,14 @@ function GraphCanvas({ data }: KnowledgeGraphProps) {
           const connectedEntity = data.entities.find((e) => e.id === connectedId);
           return connectedEntity ? { entity: connectedEntity, relation: r } : null;
         })
-        .filter(Boolean) as Array<{ entity: Entity; relation: Relation }>;
+        .filter(Boolean) as Array<{ entity: ExtractedEntity; relation: ExtractedRelation }>;
 
       setSelectedNode({ entity, connections });
     },
     [data.entities, data.relations]
   );
 
-  const toggleFilter = (type: EntityType) => {
+  const toggleFilter = (type: InferredType) => {
     setActiveFilters((prev) => {
       const next = new Set(prev);
       if (next.has(type)) {
@@ -241,13 +246,13 @@ function GraphCanvas({ data }: KnowledgeGraphProps) {
   };
 
   const availableTypes = useMemo(() => {
-    const types = new Set<EntityType>();
+    const types = new Set<InferredType>();
     data.entities.forEach((e) => types.add(e.type));
     return Array.from(types);
   }, [data.entities]);
 
   return (
-    <div style={{ width: "100%", height: "100%", display: "flex" }}>
+    <div style={{ width: "100%", height: "100%", minHeight: "400px" }}>
       <ReactFlow
         nodes={nodes}
         edges={edges}
@@ -277,7 +282,7 @@ function GraphCanvas({ data }: KnowledgeGraphProps) {
             <Search size={16} style={{ color: "var(--text-muted)" }} />
             <input
               type="text"
-              placeholder="Search entities..."
+              placeholder="Search..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               style={{
@@ -340,7 +345,7 @@ function GraphCanvas({ data }: KnowledgeGraphProps) {
           >
             <div style={{ display: "flex", alignItems: "center", gap: "6px", marginBottom: "4px" }}>
               <Filter size={14} style={{ color: "var(--text-muted)" }} />
-              <span style={{ fontSize: "11px", fontWeight: 600, color: "var(--text-secondary)" }}>FILTERS</span>
+              <span style={{ fontSize: "11px", fontWeight: 600, color: "var(--text-secondary)" }}>TYPES</span>
             </div>
             {availableTypes.map((type) => {
               const isActive = activeFilters.size === 0 || activeFilters.has(type);
@@ -364,8 +369,7 @@ function GraphCanvas({ data }: KnowledgeGraphProps) {
                     transition: "all 150ms ease",
                   }}
                 >
-                  {TYPE_ICONS[type]}
-                  <span style={{ textTransform: "capitalize" }}>{type}</span>
+                  <span style={{ textTransform: "capitalize" }}>{TYPE_LABELS[type]}</span>
                   <span style={{ marginLeft: "auto", opacity: 0.6 }}>{count}</span>
                 </button>
               );
@@ -401,7 +405,12 @@ function GraphCanvas({ data }: KnowledgeGraphProps) {
               color: "var(--text-muted)",
             }}
           >
-            {filteredEntities.length} entities, {filteredRelations.length} connections
+            {filteredEntities.length} entities · {filteredRelations.length} connections
+            {data.stats && (
+              <span style={{ marginLeft: "8px", opacity: 0.7 }}>
+                ({data.stats.totalTokens} tokens)
+              </span>
+            )}
           </div>
         </Panel>
       </ReactFlow>
@@ -413,7 +422,7 @@ function GraphCanvas({ data }: KnowledgeGraphProps) {
             right: "20px",
             top: "50%",
             transform: "translateY(-50%)",
-            width: "280px",
+            width: "300px",
             backgroundColor: "var(--card)",
             border: "1px solid var(--border)",
             borderRadius: "12px",
@@ -441,18 +450,7 @@ function GraphCanvas({ data }: KnowledgeGraphProps) {
                 }}
               >
                 <span style={{ color: TYPE_COLORS[selectedNode.entity.type] }}>
-                  {TYPE_ICONS[selectedNode.entity.type]}
-                </span>
-                <span
-                  style={{
-                    fontSize: "10px",
-                    fontWeight: 600,
-                    textTransform: "uppercase",
-                    letterSpacing: "0.05em",
-                    color: TYPE_COLORS[selectedNode.entity.type],
-                  }}
-                >
-                  {selectedNode.entity.type}
+                  {TYPE_LABELS[selectedNode.entity.type]}
                 </span>
               </div>
               <h3
@@ -527,6 +525,29 @@ function GraphCanvas({ data }: KnowledgeGraphProps) {
               </div>
             </div>
 
+            {selectedNode.entity.contexts.length > 0 && (
+              <div style={{ marginBottom: "16px" }}>
+                <div style={{ fontSize: "10px", color: "var(--text-muted)", marginBottom: "4px" }}>Contexts</div>
+                <div style={{ display: "flex", flexDirection: "column", gap: "4px" }}>
+                  {selectedNode.entity.contexts.slice(0, 3).map((ctx, i) => (
+                    <div
+                      key={i}
+                      style={{
+                        fontSize: "11px",
+                        padding: "6px 8px",
+                        backgroundColor: "var(--surface-hover)",
+                        borderRadius: "4px",
+                        color: "var(--text-secondary)",
+                        fontStyle: "italic",
+                      }}
+                    >
+                      "...{ctx}..."
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
             {selectedNode.connections.length > 0 && (
               <div>
                 <div style={{ fontSize: "10px", color: "var(--text-muted)", marginBottom: "8px" }}>
@@ -545,33 +566,24 @@ function GraphCanvas({ data }: KnowledgeGraphProps) {
                         borderRadius: "6px",
                       }}
                     >
-                      <span style={{ color: TYPE_COLORS[entity.type] }}>{TYPE_ICONS[entity.type]}</span>
-                      <span style={{ fontSize: "12px", color: "var(--text-primary)", flex: 1 }}>{entity.name}</span>
-                      <span style={{ fontSize: "10px", color: "var(--text-muted)" }}>×{relation.weight}</span>
+                      <span style={{ 
+                        fontSize: "10px", 
+                        padding: "2px 4px", 
+                        borderRadius: "3px",
+                        backgroundColor: TYPE_COLORS[entity.type] + "30",
+                        color: TYPE_COLORS[entity.type],
+                      }}>
+                        {entity.type[0].toUpperCase()}
+                      </span>
+                      <span style={{ fontSize: "12px", color: "var(--text-primary)", flex: 1 }}>
+                        {entity.name}
+                      </span>
+                      <span style={{ fontSize: "10px", color: "var(--text-muted)" }}>
+                        ×{relation.weight}
+                      </span>
                     </div>
                   ))}
                 </div>
-              </div>
-            )}
-
-            {selectedNode.entity.metadata?.url && (
-              <div style={{ marginTop: "16px" }}>
-                <a
-                  href={selectedNode.entity.metadata.url}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  style={{
-                    display: "flex",
-                    alignItems: "center",
-                    gap: "6px",
-                    fontSize: "12px",
-                    color: "var(--accent)",
-                    textDecoration: "none",
-                  }}
-                >
-                  <Link2 size={12} />
-                  Open link
-                </a>
               </div>
             )}
           </div>
