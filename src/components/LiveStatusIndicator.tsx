@@ -29,7 +29,10 @@ export function LiveStatusIndicator() {
       isRecent &&
       (latestActivity.status === "pending" || latestActivity.status === "running")
     ) {
+      // setState is intentional here - we're responding to new activity
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setRecentActivity(latestActivity);
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setShowIndicator(true);
 
       const timeout = setTimeout(() => {

@@ -46,7 +46,7 @@ interface SessionInfo {
   percentUsed?: number;
 }
 
-interface OpenClawStatus {
+export interface OpenClawStatus {
   sessions?: {
     byAgent?: Array<{
       agentId: string;

@@ -49,6 +49,8 @@ export function MemoryWordCloud({ words, onWordClick }: MemoryWordCloudProps) {
 
   useEffect(() => {
     if (words.length === 0) {
+      // Intentional state reset when words are cleared
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setCloudWords([]);
       return;
     }

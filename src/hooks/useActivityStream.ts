@@ -33,6 +33,17 @@ export function useActivityStream(options: UseActivityStreamOptions = {}): UseAc
   const [error, setError] = useState<string | null>(null);
   const eventSourceRef = useRef<EventSource | null>(null);
   const reconnectTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  // Store callbacks in refs to avoid circular dependency
+  const onActivityRef = useRef(onActivity);
+  const onConnectRef = useRef(onConnect);
+  const onDisconnectRef = useRef(onDisconnect);
+
+  // Keep refs updated
+  useEffect(() => {
+    onActivityRef.current = onActivity;
+    onConnectRef.current = onConnect;
+    onDisconnectRef.current = onDisconnect;
+  }, [onActivity, onConnect, onDisconnect]);
 
   const disconnect = useCallback(() => {
     if (reconnectTimeoutRef.current) {
@@ -55,7 +66,7 @@ export function useActivityStream(options: UseActivityStreamOptions = {}): UseAc
     eventSource.onopen = () => {
       setIsConnected(true);
       setError(null);
-      onConnect?.();
+      onConnectRef.current?.();
     };
 
     eventSource.onmessage = (event) => {
@@ -75,14 +86,15 @@ export function useActivityStream(options: UseActivityStreamOptions = {}): UseAc
           return;
         }
 
-        if (data.type === "new" && data.activity) {
-          setActivities((prev) => {
-            const exists = prev.some((a) => a.id === data.activity.id);
-            if (exists) return prev;
-            return [data.activity, ...prev].slice(0, 100);
-          });
-          onActivity?.(data.activity);
-        }
+    if (data.type === "new" && data.activity) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
+      setActivities((prev) => {
+        const exists = prev.some((a) => a.id === data.activity.id);
+        if (exists) return prev;
+        return [data.activity, ...prev].slice(0, 100);
+      });
+      onActivityRef.current?.(data.activity);
+    }
       } catch {
         // Ignore parse errors
       }
@@ -91,16 +103,29 @@ export function useActivityStream(options: UseActivityStreamOptions = {}): UseAc
     eventSource.onerror = () => {
       setIsConnected(false);
       setError("Connection lost");
-      onDisconnect?.();
+      onDisconnectRef.current?.();
       eventSource.close();
       eventSourceRef.current = null;
 
       reconnectTimeoutRef.current = setTimeout(() => {
         setError("Reconnecting...");
-        connect();
+        // Reconnect by triggering a new connection
+        if (enabled && !eventSourceRef.current) {
+          const newEventSource = new EventSource("/api/activities/stream");
+          eventSourceRef.current = newEventSource;
+          
+          newEventSource.onopen = () => {
+            setIsConnected(true);
+            setError(null);
+            onConnectRef.current?.();
+          };
+          
+          newEventSource.onmessage = eventSource.onmessage;
+          newEventSource.onerror = eventSource.onerror;
+        }
       }, 3000);
     };
-  }, [enabled, onActivity, onConnect, onDisconnect]);
+  }, [enabled]);
 
   const clearActivities = useCallback(() => {
     setActivities([]);
@@ -110,6 +135,7 @@ export function useActivityStream(options: UseActivityStreamOptions = {}): UseAc
     if (enabled) {
       connect();
     } else {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       disconnect();
     }
 

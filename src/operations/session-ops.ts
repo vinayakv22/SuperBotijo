@@ -267,7 +267,10 @@ export async function getSessionStats(): Promise<OperationResult<{
   try {
     const result = await getSessions({}, { limit: 1000 });
     if (!result.success || !result.data) {
-      return result as OperationResult<any>;
+      return {
+        success: false,
+        error: result.error || "Failed to get sessions",
+      };
     }
 
     const sessions = result.data.items;

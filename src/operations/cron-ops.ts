@@ -70,7 +70,7 @@ export function calculateNextRun(expression: string): Date | null {
     });
 
     // Simple calculation for common patterns
-    let next = new Date(now);
+    const next = new Date(now);
 
     if (min !== null && hour === null) {
       // Every N minutes

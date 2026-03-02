@@ -16,7 +16,7 @@ function isAuthenticated(request: NextRequest): boolean {
   return !!(authCookie && authCookie.value === AUTH_TOKEN);
 }
 
-export function middleware(request: NextRequest) {
+export function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
   // Always allow public pages (login)

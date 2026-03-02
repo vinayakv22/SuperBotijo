@@ -1,5 +1,4 @@
-import { describe, it, expect } from "vitest";
-import path from "path";
+import { describe, it, expect, vi } from "vitest";
 
 // Need to test the module fresh since it uses process.env at load time
 describe("paths", () => {

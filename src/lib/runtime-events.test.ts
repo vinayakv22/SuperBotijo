@@ -119,7 +119,7 @@ describe("runtime-events", () => {
     });
 
     it("should add timestamp if not present", () => {
-      const handler = vi.fn<[RuntimeEvent]>();
+      const handler = vi.fn();
       eventBridge.subscribe("activity:update", handler);
 
       eventBridge.emit({

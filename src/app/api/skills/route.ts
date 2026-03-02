@@ -52,6 +52,7 @@ export async function GET(request: NextRequest) {
     const installedSkills = await listInstalledSkills();
     
     // Merge data
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const skillsMap = new Map<string, any>();
     
     // Add scanned skills first

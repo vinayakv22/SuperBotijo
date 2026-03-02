@@ -193,7 +193,7 @@ export function ClawHubBrowser({ onInstall, onClose }: ClawHubBrowserProps) {
               style={{ color: "var(--text-muted)" }}
             />
             <p style={{ color: "var(--text-secondary)" }}>
-              No skills found for "{query}"
+              No skills found for &quot;{query}&quot;
             </p>
           </div>
         )}

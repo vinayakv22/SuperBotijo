@@ -140,6 +140,8 @@ export function useRealtime(options: UseRealtimeOptions = {}): UseRealtimeReturn
 
         // Dispatch to handler
         if (onEvent && true) {
+          // Type assertion needed due to dynamic event dispatch
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
           onEvent(data.type as keyof ServerEventMap, data.payload as any);
         }
       } catch (err) {
@@ -181,11 +183,12 @@ export function useRealtime(options: UseRealtimeOptions = {}): UseRealtimeReturn
         };
       });
 
-      if (wasConnected) {
-        onDisconnect?.();
+        if (wasConnected) {
+          onDisconnect?.();
+        }
       }
-    };
-  }, [enabled, channels.join(','), onEvent, onConnect, onDisconnect, onError, state.isConnected]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [enabled, channels.join(','), onEvent, onConnect, onDisconnect, onError, state.isConnected]);
 
   const subscribe = useCallback(async (newChannels: ChannelName[]) => {
     if (!state.clientId) return;

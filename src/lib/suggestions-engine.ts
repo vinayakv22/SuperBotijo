@@ -28,7 +28,7 @@ export interface Suggestion {
   appliedAt?: string;
 }
 
-interface UsageData {
+export interface UsageData {
   modelUsage: Array<{ model: string; count: number; totalTokens: number; totalCost: number }>;
   recentErrors: Array<{ message: string; count: number; lastSeen: string }>;
   cronHealth: Array<{ name: string; successRate: number; lastRun: string }>;

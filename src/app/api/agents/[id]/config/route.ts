@@ -5,7 +5,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getAgentById } from '@/operations/agent-ops';
 
 // In-memory config store (would be DB in production)
-const agentConfigs = new Map<string, Record<string, any>>();
+const agentConfigs = new Map<string, Record<string, unknown>>();
 
 // Default config
 const DEFAULT_CONFIG = {
@@ -62,7 +62,7 @@ export async function PATCH(request: NextRequest, { params }: { params: Promise<
     };
 
     // Validate updates
-    const updates: Record<string, any> = {};
+    const updates: Record<string, unknown> = {};
     
     if (body.temperature !== undefined) {
       const temp = parseFloat(body.temperature);

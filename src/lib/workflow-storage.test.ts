@@ -11,9 +11,25 @@ import {
   exportWorkflow,
   importWorkflow,
 } from "./workflow-storage";
+import type { Workflow } from "./workflow-templates";
 
 const DATA_DIR = path.join(process.cwd(), "data");
 const WORKFLOWS_FILE = path.join(DATA_DIR, "workflows.json");
+
+function createTestWorkflow(overrides: Partial<Workflow> = {}): Workflow {
+  return {
+    id: "test-id",
+    name: "Test Workflow",
+    description: "Test description",
+    nodes: [],
+    edges: [],
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString(),
+    isTemplate: false,
+    status: "draft",
+    ...overrides,
+  };
+}
 
 function backup() {
   try {
@@ -54,15 +70,7 @@ describe("workflow-storage", () => {
     });
 
     it("returns workflows from file", () => {
-      const testWorkflows = [
-        {
-          id: "test-1",
-          name: "Test Workflow",
-          nodes: [],
-          edges: [],
-          createdAt: new Date().toISOString(),
-        },
-      ];
+      const testWorkflows = [createTestWorkflow({ id: "test-1", name: "Test Workflow" })];
       saveWorkflows(testWorkflows);
 
       const loaded = loadWorkflows();
@@ -73,11 +81,7 @@ describe("workflow-storage", () => {
 
   describe("createWorkflow", () => {
     it("creates a new workflow with generated id", () => {
-      const workflow = createWorkflow({
-        name: "New Workflow",
-        nodes: [],
-        edges: [],
-      });
+      const workflow = createWorkflow(createTestWorkflow({ id: "", name: "New Workflow" }));
 
       expect(workflow.id).toBeDefined();
       expect(workflow.name).toBe("New Workflow");
@@ -86,12 +90,7 @@ describe("workflow-storage", () => {
     });
 
     it("preserves provided id", () => {
-      const workflow = createWorkflow({
-        id: "custom-id",
-        name: "Custom ID Workflow",
-        nodes: [],
-        edges: [],
-      });
+      const workflow = createWorkflow(createTestWorkflow({ id: "custom-id", name: "Custom ID Workflow" }));
 
       expect(workflow.id).toBe("custom-id");
     });
@@ -104,12 +103,7 @@ describe("workflow-storage", () => {
     });
 
     it("returns workflow by id", () => {
-      createWorkflow({
-        id: "test-get",
-        name: "Test Get",
-        nodes: [],
-        edges: [],
-      });
+      createWorkflow(createTestWorkflow({ id: "test-get", name: "Test Get" }));
 
       const result = getWorkflow("test-get");
       expect(result).not.toBeNull();
@@ -124,12 +118,7 @@ describe("workflow-storage", () => {
     });
 
     it("updates workflow fields", () => {
-      createWorkflow({
-        id: "test-update",
-        name: "Original Name",
-        nodes: [],
-        edges: [],
-      });
+      createWorkflow(createTestWorkflow({ id: "test-update", name: "Original Name" }));
 
       const updated = updateWorkflow("test-update", { name: "Updated Name" });
 
@@ -146,12 +135,7 @@ describe("workflow-storage", () => {
     });
 
     it("deletes existing workflow", () => {
-      createWorkflow({
-        id: "test-delete",
-        name: "To Delete",
-        nodes: [],
-        edges: [],
-      });
+      createWorkflow(createTestWorkflow({ id: "test-delete", name: "To Delete" }));
 
       const result = deleteWorkflow("test-delete");
       expect(result).toBe(true);
@@ -163,13 +147,11 @@ describe("workflow-storage", () => {
 
   describe("exportWorkflow", () => {
     it("returns JSON string", () => {
-      const workflow = {
+      const workflow = createTestWorkflow({
         id: "export-test",
         name: "Export Test",
-        nodes: [{ id: "node1", type: "test", position: { x: 0, y: 0 }, data: {} }],
-        edges: [],
-        createdAt: new Date().toISOString(),
-      };
+        nodes: [{ id: "node1", type: "task", position: { x: 0, y: 0 }, data: { label: "Test" } }],
+      });
 
       const exported = exportWorkflow(workflow);
 
@@ -180,11 +162,7 @@ describe("workflow-storage", () => {
 
   describe("importWorkflow", () => {
     it("imports valid workflow JSON", () => {
-      const json = JSON.stringify({
-        name: "Imported Workflow",
-        nodes: [],
-        edges: [],
-      });
+      const json = JSON.stringify(createTestWorkflow({ name: "Imported Workflow" }));
 
       const imported = importWorkflow(json);
 

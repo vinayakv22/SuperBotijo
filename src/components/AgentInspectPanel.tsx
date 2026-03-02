@@ -67,7 +67,7 @@ export function AgentInspectPanel({ agentId, isOpen, onClose, onAction }: AgentI
   const [activities, setActivities] = useState<AgentActivity[]>([]);
   const [logs, setLogs] = useState<AgentLog[]>([]);
   const [metrics, setMetrics] = useState<AgentMetrics | null>(null);
-  const [config, setConfig] = useState<Record<string, any>>({});
+  const [config, setConfig] = useState<Record<string, unknown>>({});
   const [isLoading, setIsLoading] = useState(false);
   const [logFilter, setLogFilter] = useState<'all' | 'info' | 'warn' | 'error'>('all');
 

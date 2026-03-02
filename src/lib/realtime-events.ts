@@ -159,20 +159,9 @@ export interface ServerEventMap {
   'queue:updated': QueueUpdatedPayload;
 }
 
-export interface ClientEventMap {
-  'subscribe': SubscribePayload;
-  'unsubscribe': SubscribePayload;
-  'ping': {};
-  'action:approve': ActionApprovePayload;
-  'action:reject': ActionRejectPayload;
-  'agent:pause': AgentControlPayload;
-  'agent:resume': AgentControlPayload;
-  'session:cancel': { sessionId: string };
-}
-
 // Helper to generate unique event IDs
 export function generateEventId(): string {
-  return `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+  return `${Date.now()}-${Math.random().toString(36).substring(2, 9)}`;
 }
 
 // Helper to create a typed event

@@ -541,7 +541,7 @@ function GraphCanvas({ data }: KnowledgeGraphProps) {
                         fontStyle: "italic",
                       }}
                     >
-                      "...{ctx}..."
+                      &quot;...{ctx}...&quot;
                     </div>
                   ))}
                 </div>

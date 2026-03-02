@@ -1,17 +1,15 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState } from "react";
+
+function getInitialState(): boolean {
+  if (typeof window === "undefined") return false;
+  const stored = localStorage.getItem("fleetSidebarOpen");
+  return stored === "true";
+}
 
 export function useFleetSidebar() {
-  const [isOpen, setIsOpen] = useState(false);
-
-  // Load state from localStorage on mount
-  useEffect(() => {
-    const stored = localStorage.getItem("fleetSidebarOpen");
-    if (stored !== null) {
-      setIsOpen(stored === "true");
-    }
-  }, []);
+  const [isOpen, setIsOpen] = useState(getInitialState);
 
   // Persist state to localStorage when it changes
   const toggleSidebar = () => {
