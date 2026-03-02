@@ -1,9 +1,6 @@
 @import "tailwindcss";
 @plugin "@tailwindcss/typography";
 
-/* Fira Code / Fira Sans - Recommended by UI/UX Pro Max skill */
-@import url('https://fonts.googleapis.com/css2?family=Fira+Code:wght@400;500;600;700&family=Fira+Sans:wght@300;400;500;600;700&display=swap');
-
 /* ============================================
    TenacitOS Design System
    Based on tenacios-design.json (Pencil)
