@@ -4,6 +4,7 @@ import { Dock, TopBar, StatusBar } from "@/components/SuperBotijo";
 import { FleetSidebar } from "@/components/FleetSidebar";
 import { useFleetSidebar } from "@/hooks/useFleetSidebar";
 import { I18nProvider } from "@/i18n/provider";
+import { CommandPalette } from "@/components/CommandPalette";
 
 export default function DashboardLayout({
   children,
@@ -38,6 +39,9 @@ export default function DashboardLayout({
           isOpen={fleetSidebarOpen} 
           onToggle={toggleSidebar} 
         />
+
+        {/* Command Palette - Global Cmd+K */}
+        <CommandPalette />
       </div>
     </I18nProvider>
   );
