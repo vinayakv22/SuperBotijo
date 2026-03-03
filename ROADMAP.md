@@ -576,9 +576,9 @@
 | 11. Advanced Viz | ✅ | 100% |
 | 12. Collaboration | ✅ | 90% (solo Team Dashboard pendiente) |
 | 13. UI/UX Improvements | ✅ | 100% |
-| 14. Mission Control Layer | 🚧 | 71% (5/7 features completadas) |
+| 14. Mission Control Layer | 🚧 | 86% (6/7 features completadas) |
 
-**Overall: 97% completado (Fase 14 al 71% - 5/7 features completadas)**
+**Overall: 98% completado (Fase 14 al 86% - 6/7 features completadas)**
 
 ---
 
@@ -591,6 +591,7 @@
 | `25b1b98` | Projects System | Projects API + Task linking + UI |
 | `8f54cb6` | Heartbeat Autonomy | Autonomous task execution + audit |
 | `79d22ff` | Agent Identities | API + UI para identidad de agentes |
+| `1b82ab6` | Operations Journal | Diario narrativo de operaciones |
 | `f814f63` | Fix: use client | Agregado "use client" a forbidden/not-found |
 | `726cf1e` | Fix: allowedDevOrigins | Cross-origin request handling |
 
@@ -683,16 +684,17 @@
 - **Esfuerzo:** 3-4 horas
 - **Commit:** `8f54cb6`
 
-### 14.7 Operations Journal ⏳
+### 14.7 Operations Journal ✅
 > Diario narrativo de operaciones (no solo activity log)
 
 - [x] DB: `operations_journal` table (created in Phase 14.1)
-- [ ] API: `GET/POST/PUT/DELETE /api/journal`
-- [ ] Lógica: Auto-generar entrada diaria desde activities (optional)
-- [ ] UI: Página `/journal` con timeline narrativo
-- [ ] UI: Entry editor para añadir highlights manuales
-- **Archivos:** `src/app/api/journal/route.ts`, `src/app/(dashboard)/journal/page.tsx`, `src/lib/kanban-db.ts`
+- [x] API: `GET/POST/PUT/DELETE /api/journal`
+- [ ] Lógica: Auto-generar entrada diaria desde activities (optional/deferido)
+- [x] UI: Página `/journal` con timeline narrativo
+- [x] UI: Entry editor para añadir highlights manuales
+- **Archivos:** `src/app/api/journal/route.ts`, `src/app/api/journal/[id]/route.ts`, `src/app/(dashboard)/journal/page.tsx`, `src/lib/kanban-db.ts`, `src/components/journal/`
 - **Esfuerzo:** 2-3 horas
+- **Commit:** `1b82ab6`
 
 ---
 
