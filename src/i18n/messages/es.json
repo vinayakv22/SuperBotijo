@@ -132,5 +132,41 @@
   },
   "sessions": {
     "title": "Sesiones"
+  },
+  "mission": {
+    "title": "Centro de Misión",
+    "subtitle": "Define el propósito, objetivos y valores centrales de tu agente",
+    "statement": "Declaración de Misión",
+    "statementPlaceholder": "Define el propósito central de tu agente...",
+    "goals": "Objetivos Estratégicos",
+    "goalsPlaceholder": "Agregar un nuevo objetivo...",
+    "addGoal": "Agregar",
+    "values": "Valores Centrales",
+    "valuesPlaceholder": "Agregar un nuevo valor...",
+    "addValue": "Agregar",
+    "actions": "Acciones",
+    "saveMission": "Guardar Misión",
+    "saving": "Guardando...",
+    "resetDefault": "Restablecer por Defecto",
+    "backToDashboard": "Volver al Panel",
+    "savedSuccess": "¡Misión guardada exitosamente!",
+    "askMissionControl": "Preguntar al Centro de Misión",
+    "promptPlaceholder": "¿En qué debería trabajar?",
+    "getRecommendations": "Obtener Recomendaciones",
+    "analyzing": "Analizando...",
+    "topRecommendations": "Principales Recomendaciones",
+    "high": "alto",
+    "medium": "med",
+    "low": "bajo",
+    "noTasksMatch": "No hay tareas que coincidan con tu misión aún.",
+    "addGoalsValues": "Agrega objetivos y valores para obtener recomendaciones.",
+    "loading": "Cargando misión...",
+    "confirmReset": "¿Estás seguro de que deseas restablecer la misión por defecto?",
+    "tips": {
+      "statement": "Mantén la declaración de misión clara e inspiradora",
+      "goals": "Los objetivos deben ser específicos y medibles",
+      "values": "Los valores guían la toma de decisiones ante disyuntivas",
+      "review": "Revisa y actualiza tu misión periódicamente"
+    }
   }
 }

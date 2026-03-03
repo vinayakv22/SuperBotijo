@@ -132,5 +132,41 @@
   },
   "sessions": {
     "title": "Sessions"
+  },
+  "mission": {
+    "title": "Mission Control",
+    "subtitle": "Define your agent's purpose, goals, and core values",
+    "statement": "Mission Statement",
+    "statementPlaceholder": "Define the core purpose of your agent...",
+    "goals": "Strategic Goals",
+    "goalsPlaceholder": "Add a new goal...",
+    "addGoal": "Add",
+    "values": "Core Values",
+    "valuesPlaceholder": "Add a new value...",
+    "addValue": "Add",
+    "actions": "Actions",
+    "saveMission": "Save Mission",
+    "saving": "Saving...",
+    "resetDefault": "Reset to Default",
+    "backToDashboard": "Back to Dashboard",
+    "savedSuccess": "Mission saved successfully!",
+    "askMissionControl": "Ask Mission Control",
+    "promptPlaceholder": "What should I work on?",
+    "getRecommendations": "Get Recommendations",
+    "analyzing": "Analyzing...",
+    "topRecommendations": "Top Recommendations",
+    "high": "high",
+    "medium": "med",
+    "low": "low",
+    "noTasksMatch": "No tasks match your mission yet.",
+    "addGoalsValues": "Add goals and values to get recommendations.",
+    "loading": "Loading mission...",
+    "confirmReset": "Are you sure you want to reset the mission to default?",
+    "tips": {
+      "statement": "Keep the mission statement clear and inspiring",
+      "goals": "Goals should be specific and measurable",
+      "values": "Values guide decision-making when facing trade-offs",
+      "review": "Review and update your mission periodically"
+    }
   }
 }

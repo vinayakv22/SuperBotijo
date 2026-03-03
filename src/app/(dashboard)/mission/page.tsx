@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
+import { useI18n } from "@/i18n/provider";
 import {
   Target,
   ArrowLeft,
@@ -14,14 +15,54 @@ import {
   AlertCircle,
   CheckCircle2,
   Loader2,
+  Sparkles,
+  Zap,
+  BarChart3,
 } from "lucide-react";
 
 const MAX_STATEMENT_LENGTH = 1000;
 const MAX_GOALS_COUNT = 20;
 const MAX_VALUES_COUNT = 10;
 
+// Types for scored tasks
+type PriorityLevel = "high" | "medium" | "low";
+
+interface ScoredTask {
+  id: string;
+  title: string;
+  description: string | null;
+  status: string;
+  priority: string;
+  assignee: string | null;
+  labels: { name: string; color: string }[];
+  order: number;
+  projectId: string | null;
+  created_at: string;
+  updated_at: string;
+  score: number;
+  priorityLevel: PriorityLevel;
+  matchedKeywords: string[];
+}
+
+interface PromptResponse {
+  prompt: string;
+  mission: {
+    statement: string;
+    goals: string[];
+    values: string[];
+  } | null;
+  tasks: ScoredTask[];
+  summary: {
+    totalTasks: number;
+    highPriority: number;
+    mediumPriority: number;
+    lowPriority: number;
+  };
+}
+
 export default function MissionPage() {
   const router = useRouter();
+  const { t } = useI18n();
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -33,6 +74,12 @@ export default function MissionPage() {
   const [values, setValues] = useState<string[]>([]);
   const [newGoal, setNewGoal] = useState("");
   const [newValue, setNewValue] = useState("");
+
+  // Prompt state
+  const [promptQuery, setPromptQuery] = useState("");
+  const [promptLoading, setPromptLoading] = useState(false);
+  const [promptResults, setPromptResults] = useState<ScoredTask[] | null>(null);
+  const [promptSummary, setPromptSummary] = useState<PromptResponse["summary"] | null>(null);
 
   // Fetch mission on mount
   useEffect(() => {
@@ -123,6 +170,33 @@ export default function MissionPage() {
       setError(err instanceof Error ? err.message : "Failed to reset mission");
     } finally {
       setSaving(false);
+    }
+  };
+
+  const handlePromptSubmit = async () => {
+    try {
+      setPromptLoading(true);
+      setError(null);
+
+      const res = await fetch("/api/mission/prompt", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ prompt: promptQuery }),
+      });
+
+      if (!res.ok) {
+        const data = await res.json();
+        throw new Error(data.error || "Failed to get task recommendations");
+      }
+
+      const data: PromptResponse = await res.json();
+      setPromptResults(data.tasks);
+      setPromptSummary(data.summary);
+    } catch (err) {
+      console.error("Failed to get task recommendations:", err);
+      setError(err instanceof Error ? err.message : "Failed to get task recommendations");
+    } finally {
+      setPromptLoading(false);
     }
   };
 
@@ -498,6 +572,158 @@ export default function MissionPage() {
               <li>• Values guide decision-making when facing trade-offs</li>
               <li>• Review and update your mission periodically</li>
             </ul>
+          </div>
+
+          {/* Ask Mission Control Card */}
+          <div
+            className="rounded-xl p-5"
+            style={{
+              backgroundColor: "var(--card)",
+              border: "1px solid var(--border)",
+            }}
+          >
+            <h3
+              className="text-sm font-semibold mb-3 flex items-center gap-2"
+              style={{ color: "var(--text-primary)" }}
+            >
+              <Sparkles className="h-4 w-4" style={{ color: "var(--accent)" }} />
+              Ask Mission Control
+            </h3>
+
+            <div className="space-y-3">
+              <input
+                type="text"
+                value={promptQuery}
+                onChange={(e) => setPromptQuery(e.target.value)}
+                onKeyDown={(e) => e.key === "Enter" && handlePromptSubmit()}
+                placeholder="What should I work on?"
+                className="w-full rounded-lg border px-3 py-2 text-sm outline-none"
+                style={{
+                  backgroundColor: "var(--card-elevated)",
+                  borderColor: "var(--border)",
+                  color: "var(--text-primary)",
+                }}
+              />
+
+              <button
+                onClick={handlePromptSubmit}
+                disabled={promptLoading}
+                className="w-full flex items-center justify-center gap-2 rounded-lg px-4 py-2.5 text-sm font-bold disabled:opacity-50"
+                style={{
+                  backgroundColor: "var(--accent)",
+                  color: "white",
+                }}
+              >
+                {promptLoading ? (
+                  <>
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                    Analyzing...
+                  </>
+                ) : (
+                  <>
+                    <Zap className="h-4 w-4" />
+                    Get Recommendations
+                  </>
+                )}
+              </button>
+
+              {/* Results */}
+              {promptResults && promptResults.length > 0 && (
+                <div className="mt-4 pt-4 border-t" style={{ borderColor: "var(--border)" }}>
+                  {/* Summary */}
+                  <div className="flex items-center justify-between mb-3">
+                    <span className="text-xs font-medium" style={{ color: "var(--text-muted)" }}>
+                      Top Recommendations
+                    </span>
+                    <div className="flex gap-1">
+                      {promptSummary && (
+                        <>
+                          <span
+                            className="px-2 py-0.5 rounded text-xs font-medium"
+                            style={{ backgroundColor: "var(--error)", color: "white" }}
+                          >
+                            {promptSummary.highPriority} high
+                          </span>
+                          <span
+                            className="px-2 py-0.5 rounded text-xs font-medium"
+                            style={{ backgroundColor: "var(--info)", color: "white" }}
+                          >
+                            {promptSummary.mediumPriority} med
+                          </span>
+                          <span
+                            className="px-2 py-0.5 rounded text-xs font-medium"
+                            style={{ backgroundColor: "var(--text-muted)", color: "white" }}
+                          >
+                            {promptSummary.lowPriority} low
+                          </span>
+                        </>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Task List */}
+                  <div className="space-y-2 max-h-64 overflow-y-auto">
+                    {promptResults.map((task) => (
+                      <div
+                        key={task.id}
+                        className="p-3 rounded-lg"
+                        style={{
+                          backgroundColor: "var(--card-elevated)",
+                          border: "1px solid var(--border)",
+                        }}
+                      >
+                        <div className="flex items-start justify-between gap-2 mb-1">
+                          <span
+                            className="text-sm font-medium flex-1"
+                            style={{ color: "var(--text-primary)" }}
+                          >
+                            {task.title}
+                          </span>
+                          <span
+                            className={`px-2 py-0.5 rounded text-xs font-bold ${
+                              task.priorityLevel === "high"
+                                ? "bg-red-500 text-white"
+                                : task.priorityLevel === "medium"
+                                ? "bg-blue-500 text-white"
+                                : "bg-gray-500 text-white"
+                            }`}
+                          >
+                            {task.score}
+                          </span>
+                        </div>
+                        {task.matchedKeywords.length > 0 && (
+                          <div className="flex flex-wrap gap-1 mt-2">
+                            {task.matchedKeywords.slice(0, 3).map((kw, i) => (
+                              <span
+                                key={i}
+                                className="px-2 py-0.5 rounded text-xs"
+                                style={{
+                                  backgroundColor: "var(--accent)",
+                                  color: "white",
+                                  opacity: 0.8,
+                                }}
+                              >
+                                {kw}
+                              </span>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {promptResults && promptResults.length === 0 && (
+                <div
+                  className="mt-4 pt-4 border-t text-center"
+                  style={{ borderColor: "var(--border)", color: "var(--text-muted)" }}
+                >
+                  <p className="text-sm">No tasks match your mission yet.</p>
+                  <p className="text-xs mt-1">Add goals and values to get recommendations.</p>
+                </div>
+              )}
+            </div>
           </div>
         </div>
       </div>
