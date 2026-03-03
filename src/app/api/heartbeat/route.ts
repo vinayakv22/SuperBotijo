@@ -1,6 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
 import { readFileSync, writeFileSync, existsSync, mkdirSync } from "fs";
 import { join, dirname } from "path";
+import {
+  getAutonomySettings,
+  type AutonomySettings,
+} from "@/lib/autonomy-db";
 
 export const dynamic = "force-dynamic";
 
@@ -14,6 +18,7 @@ export interface HeartbeatStatus {
   heartbeatMd: string;
   heartbeatMdPath: string;
   configured: boolean;
+  autonomy?: AutonomySettings;
 }
 
 function getHeartbeatPaths(): string[] {
@@ -64,11 +69,15 @@ export async function GET() {
       }
     }
 
+    // Get autonomy settings
+    const autonomy = getAutonomySettings();
+
     return NextResponse.json({
       ...config,
       heartbeatMd,
       heartbeatMdPath,
       configured: heartbeatMd.length > 0,
+      autonomy,
     });
   } catch (error) {
     console.error("[heartbeat] Error:", error);
