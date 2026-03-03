@@ -1,9 +1,10 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
-  // Skip static generation for pages with client-side interactivity
-  experimental: {
-    // Enable dynamic rendering for all routes
-  },
+  // Allow cross-origin requests from local network IPs
+  allowedDevOrigins: [
+    "100.84.105.74",
+    "localhost",
+  ],
 };
 
 export default nextConfig;
