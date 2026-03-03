@@ -32,6 +32,7 @@ import {
   Bell,
   LayoutGrid,
   Target,
+  BookOpen,
 } from "lucide-react";
 import { getAgentDisplayName } from "@/config/branding";
 
@@ -55,6 +56,7 @@ const navGroups = [
       { href: "/activity", label: "Activity", icon: Activity },
       { href: "/calendar", label: "Calendar", icon: Calendar },
       { href: "/notifications", label: "Notifications", icon: Bell },
+      { href: "/journal", label: "Journal", icon: BookOpen },
     ],
   },
   {

@@ -18,6 +18,7 @@ import type {
   UpdateAgentIdentityInput,
   OperationsJournalEntry,
   CreateJournalEntryInput,
+  UpdateJournalEntryInput,
   ListJournalEntriesFilters,
 } from "@/lib/mission-types";
 
@@ -1132,6 +1133,42 @@ export function getJournalEntry(id: string): OperationsJournalEntry | null {
   const db = getDb();
   const row = db.prepare("SELECT * FROM operations_journal WHERE id = ?").get(id) as Record<string, unknown> | undefined;
   return row ? parseJournalEntryRow(row) : null;
+}
+
+/**
+ * Update a journal entry
+ * @param id - Entry UUID
+ * @param updates - Fields to update
+ * @returns The updated journal entry or null if not found
+ */
+export function updateJournalEntry(id: string, updates: UpdateJournalEntryInput): OperationsJournalEntry | null {
+  const db = getDb();
+  const existing = getJournalEntry(id);
+  if (!existing) return null;
+
+  const fields: string[] = [];
+  const values: unknown[] = [];
+
+  if (updates.date !== undefined) {
+    fields.push("date = ?");
+    values.push(updates.date);
+  }
+  if (updates.narrative !== undefined) {
+    fields.push("narrative = ?");
+    values.push(updates.narrative);
+  }
+  if (updates.highlights !== undefined) {
+    fields.push("highlights = ?");
+    values.push(JSON.stringify(updates.highlights));
+  }
+
+  if (fields.length === 0) return existing;
+
+  values.push(id);
+
+  db.prepare(`UPDATE operations_journal SET ${fields.join(", ")} WHERE id = ?`).run(...values);
+
+  return getJournalEntry(id);
 }
 
 /**

@@ -164,6 +164,15 @@ export interface CreateJournalEntryInput {
   highlights?: string[];
 }
 
+/**
+ * Input for updating an existing journal entry
+ */
+export interface UpdateJournalEntryInput {
+  date?: string;
+  narrative?: string;
+  highlights?: string[];
+}
+
 // ============================================================================
 // Filter Types
 // ============================================================================
