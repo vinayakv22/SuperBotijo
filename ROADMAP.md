@@ -593,6 +593,7 @@
 | `79d22ff` | Agent Identities | API + UI para identidad de agentes |
 | `1b82ab6` | Operations Journal | Diario narrativo de operaciones |
 | `aacc4f8` | Reverse Prompting Engine | Scoring de tareas por misión |
+| `21bb412` | Navigation UX | Reorganize Mission Control section + new pages |
 | `f814f63` | Fix: use client | Agregado "use client" a forbidden/not-found |
 | `726cf1e` | Fix: allowedDevOrigins | Cross-origin request handling |
 
@@ -731,6 +732,12 @@
 > - Enfoque en "Mission Control Layer" como paradigma humano/filosófico
 > - 7 sub-fases concretas con 38 tareas específicas
 > - Integración: Mission → Projects → Tasks → Heartbeat autonomy
+> - **Navigation UX:** Nueva sección "Mission Control" con 5 páginas dedicadas:
+>   - `/mission` - Mission statement + reverse prompting
+>   - `/kanban` - Board de tareas con projects
+>   - `/projects` - Lista de proyectos (nueva página)
+>   - `/journal` - Diario narrativo
+>   - `/autonomy` - Heartbeat autonomy control (nueva página)
 > - Estimación: 15-20 horas totales
 >
 > **Decisiones técnicas tomadas:**
