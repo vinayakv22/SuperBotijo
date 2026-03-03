@@ -387,7 +387,8 @@ export function CronJobModal({ isOpen, onClose, onSave, editingJob }: CronJobMod
                         style={{
                           width: "100%", padding: "0.625rem 1rem",
                           display: "flex", alignItems: "center", justifyContent: "space-between",
-                          background: "none", border: "none", cursor: "pointer", textAlign: "left",
+                          background: "none", borderTop: "none", borderLeft: "none", borderRight: "none",
+                          cursor: "pointer", textAlign: "left",
                           borderBottom: "1px solid var(--border)",
                         }}
                         onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = "var(--card-elevated)"; }}

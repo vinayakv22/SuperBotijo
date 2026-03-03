@@ -179,8 +179,10 @@ export default function AnalyticsPage() {
             style={{
               color: activeTab === id ? "var(--accent)" : "var(--text-secondary)",
               borderBottom: activeTab === id ? "2px solid var(--accent)" : "2px solid transparent",
+              borderLeft: "none",
+              borderRight: "none",
+              borderTop: "none",
               background: "none",
-              border: "none",
               cursor: "pointer",
               paddingBottom: "0.5rem",
             }}
