@@ -27,10 +27,13 @@ export async function GET(request: NextRequest) {
     const effectiveAgentName = agentName || settings.agentName;
 
     if (!effectiveAgentName) {
-      return NextResponse.json(
-        { error: "No agent name configured. Set agentName in autonomy settings." },
-        { status: 400 }
-      );
+      // Return empty tasks list instead of error - page should still render
+      return NextResponse.json({
+        agentName: null,
+        count: 0,
+        tasks: [],
+        message: "No agent name configured. Set agentName in autonomy settings.",
+      });
     }
 
     // Get tasks where assignee = agentName AND status = 'in_progress'
