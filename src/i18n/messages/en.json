@@ -197,6 +197,12 @@
     "timelineView": "Timeline",
     "cardsView": "Cards"
   },
+  "calendar": {
+    "title": "Calendar",
+    "subtitle": "Weekly view of scheduled tasks",
+    "scheduledTasks": "scheduled tasks",
+    "today": "Today"
+  },
   "files": {
     "title": "File Browser",
     "subtitle": "Browse agent workspaces and files",

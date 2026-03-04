@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
-import { listTasks, type KanbanTask } from "@/lib/kanban-db";
+import { listTasks } from "@/lib/kanban-db";
 import { getAutonomySettings } from "@/lib/autonomy-db";
+import { resolveDependencies, type ResolvedTask } from "@/lib/dependency-resolver";
 
 export const dynamic = "force-dynamic";
 
@@ -10,6 +11,10 @@ interface TaskResponse {
   description: string | null;
   priority: string;
   status: string;
+  isExecutable: boolean;
+  blockedReason: string | null;
+  claimedBy: string | null;
+  claimedAt: string | null;
 }
 
 /**
@@ -42,13 +47,26 @@ export async function GET(request: NextRequest) {
       status: "in_progress",
     });
 
+    // Filter out tasks claimed by other agents
+    const availableTasks = tasks.filter((task) => {
+      if (!task.claimedBy) return true;
+      return task.claimedBy === effectiveAgentName;
+    });
+
+    // Resolve dependencies to compute executability
+    const resolvedTasks = resolveDependencies(availableTasks);
+
     // Transform to response format
-    const response: TaskResponse[] = tasks.map((task: KanbanTask) => ({
+    const response: TaskResponse[] = resolvedTasks.map((task: ResolvedTask) => ({
       id: task.id,
       title: task.title,
       description: task.description,
       priority: task.priority,
       status: task.status,
+      isExecutable: task.isExecutable,
+      blockedReason: task.blockedReason,
+      claimedBy: task.claimedBy,
+      claimedAt: task.claimedAt,
     }));
 
     return NextResponse.json({

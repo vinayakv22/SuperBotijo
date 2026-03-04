@@ -84,6 +84,36 @@
     "openOffice": "Abrir Oficina",
     "smartSuggestions": "💡 Sugerencias inteligentes"
   },
+  "cron": {
+    "title": "Gestor de Tareas",
+    "subtitle": "Tareas programadas del Sistema, OpenClaw y Heartbeat",
+    "cards": "Tarjetas",
+    "timeline": "Línea de tiempo",
+    "totalJobs": "Total de tareas",
+    "active": "Activas",
+    "paused": "Pausadas",
+    "createJob": "Crear tarea",
+    "noJobs": "No se encontraron tareas cron",
+    "noJobsHint": "Crea tu primera tarea para comenzar",
+    "all": "Todas",
+    "systemJobs": "Tareas del sistema",
+    "agentJobs": "Tareas del agente",
+    "heartbeat": "Heartbeat",
+    "scheduleOverview": "Vista de 7 días",
+    "triggered": "activada",
+    "failedToTrigger": "Error al activar",
+    "jobUpdated": "Tarea actualizada",
+    "jobCreated": "Tarea creada",
+    "confirmDelete": "¿Eliminar \"{name}\"?",
+    "timelineView": "Línea de tiempo",
+    "cardsView": "Tarjetas"
+  },
+  "calendar": {
+    "title": "Calendario",
+    "subtitle": "Vista semanal de tareas programadas",
+    "scheduledTasks": "tareas programadas",
+    "today": "Hoy"
+  },
   "help": {
     "dashboard": {
       "title": "Panel Principal",

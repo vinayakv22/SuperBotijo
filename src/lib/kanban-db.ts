@@ -47,6 +47,14 @@ export interface KanbanTask {
   projectId: string | null;
   created_at: string;
   updated_at: string;
+  dueDate: string | null;
+  dependsOn: string[] | null;
+  executionStatus: "pending" | "running" | "success" | "error" | "skipped" | null;
+  executionResult: string | null;
+  blockedBy: string[] | null;
+  waitingFor: string[] | null;
+  claimedBy: string | null;
+  claimedAt: string | null;
 }
 
 export interface KanbanColumn {
@@ -212,7 +220,58 @@ function getDb(): Database.Database {
     console.log("[kanban-db] Added project_id column to kanban_tasks");
   }
 
-  // Seed default columns if empty
+  // Idempotent migration: Add new task fields for dependencies and execution
+  const migrations = [
+    { name: "due_date", sql: "ALTER TABLE kanban_tasks ADD COLUMN due_date TEXT" },
+    { name: "depends_on", sql: "ALTER TABLE kanban_tasks ADD COLUMN depends_on TEXT" },
+    { name: "execution_status", sql: "ALTER TABLE kanban_tasks ADD COLUMN execution_status TEXT" },
+    { name: "execution_result", sql: "ALTER TABLE kanban_tasks ADD COLUMN execution_result TEXT" },
+    { name: "blocked_by", sql: "ALTER TABLE kanban_tasks ADD COLUMN blocked_by TEXT" },
+    { name: "waiting_for", sql: "ALTER TABLE kanban_tasks ADD COLUMN waiting_for TEXT" },
+    { name: "claimed_by", sql: "ALTER TABLE kanban_tasks ADD COLUMN claimed_by TEXT" },
+    { name: "claimed_at", sql: "ALTER TABLE kanban_tasks ADD COLUMN claimed_at TEXT" },
+  ];
+
+  for (const migration of migrations) {
+    const columnExists = _db
+      .prepare("SELECT 1 FROM pragma_table_info('kanban_tasks') WHERE name = ?")
+      .get(migration.name) as { "1": number } | undefined;
+
+    if (!columnExists) {
+      try {
+        _db.exec(migration.sql);
+        console.log(`[kanban-db] Added ${migration.name} column to kanban_tasks`);
+      } catch {
+        // Column may already exist from a previous partial migration
+      }
+    }
+  }
+
+  // Idempotent migration: Add index for claimed_by
+  _db.exec(`CREATE INDEX IF NOT EXISTS idx_kanban_tasks_claimed_by ON kanban_tasks(claimed_by)`);
+
+  // Idempotent migration: Add task_comments table for inter-agent communication
+  const commentsTableExists = _db
+    .prepare("SELECT 1 FROM sqlite_master WHERE type='table' AND name='task_comments'")
+    .get() as { "1": number } | undefined;
+
+  if (!commentsTableExists) {
+    _db.exec(`
+      CREATE TABLE task_comments (
+        id TEXT PRIMARY KEY,
+        task_id TEXT NOT NULL,
+        agent_id TEXT NOT NULL,
+        content TEXT NOT NULL,
+        created_at TEXT NOT NULL,
+        updated_at TEXT NOT NULL
+      );
+      CREATE INDEX IF NOT EXISTS idx_task_comments_task_id ON task_comments(task_id);
+      CREATE INDEX IF NOT EXISTS idx_task_comments_agent_id ON task_comments(agent_id);
+    `);
+    console.log("[kanban-db] Created task_comments table");
+  }
+
+  // Seed default columns if table is empty
   const columnCount = (_db.prepare("SELECT COUNT(*) as n FROM kanban_columns").get() as { n: number }).n;
   if (columnCount === 0) {
     const defaultColumns = [
@@ -220,6 +279,8 @@ function getDb(): Database.Database {
       { id: "in_progress", name: "In Progress", color: "#3b82f6", order: 1, limit: null },
       { id: "review", name: "Review", color: "#f59e0b", order: 2, limit: null },
       { id: "done", name: "Done", color: "#22c55e", order: 3, limit: null },
+      { id: "blocked", name: "Blocked", color: "#ef4444", order: 4, limit: null },
+      { id: "waiting", name: "Waiting", color: "#a855f7", order: 5, limit: null },
     ];
 
     const insertColumn = _db.prepare(`
@@ -234,7 +295,7 @@ function getDb(): Database.Database {
     });
 
     insertMany(defaultColumns);
-    console.log("[kanban-db] Seeded 4 default columns");
+    console.log("[kanban-db] Seeded default columns including blocked/waiting");
   }
 
   return _db;
@@ -315,6 +376,14 @@ export function createTask(input: CreateTaskInput): KanbanTask {
     projectId,
     created_at: now,
     updated_at: now,
+    dueDate: null,
+    dependsOn: null,
+    executionStatus: null,
+    executionResult: null,
+    blockedBy: null,
+    waitingFor: null,
+    claimedBy: null,
+    claimedAt: null,
   };
 }
 
@@ -504,6 +573,191 @@ export function getTasksStats(): TasksStats {
   for (const r of priorityRows) byPriority[r.priority] = r.n;
 
   return { total, byStatus, byPriority };
+}
+
+// ============================================================================
+// Task Claiming Operations (Multi-Agent Coordination)
+// ============================================================================
+
+export interface ClaimResult {
+  success: boolean;
+  task?: KanbanTask;
+  reason?: "not_found" | "already_claimed" | "claimed_by_other";
+}
+
+export interface ReleaseResult {
+  success: boolean;
+  reason?: "not_found" | "not_claimed" | "claimed_by_other";
+}
+
+export interface AgentWorkload {
+  agentId: string;
+  todo: number;
+  inProgress: number;
+  done: number;
+  claimed: number;
+}
+
+/**
+ * Atomically claim a task for an agent
+ * Uses SQL UPDATE with WHERE claimed_by IS NULL for atomicity
+ * @param taskId - Task UUID
+ * @param agentName - Name of the claiming agent
+ * @returns ClaimResult with success status and task if claimed
+ */
+export function claimTask(taskId: string, agentName: string): ClaimResult {
+  const db = getDb();
+  const task = getTask(taskId);
+
+  if (!task) {
+    return { success: false, reason: "not_found" };
+  }
+
+  if (task.claimedBy === agentName) {
+    return { success: true, task };
+  }
+
+  if (task.claimedBy !== null) {
+    return { success: false, reason: "claimed_by_other" };
+  }
+
+  const now = new Date().toISOString();
+  const result = db.prepare(`
+    UPDATE kanban_tasks
+    SET claimed_by = ?, claimed_at = ?, updated_at = ?
+    WHERE id = ? AND claimed_by IS NULL
+  `).run(agentName, now, now, taskId);
+
+  if (result.changes === 0) {
+    return { success: false, reason: "already_claimed" };
+  }
+
+  const claimedTask = getTask(taskId);
+
+  logActivity(
+    "task",
+    `Task "${task.title}" claimed by ${agentName}`,
+    "success",
+    {
+      metadata: {
+        taskId,
+        taskTitle: task.title,
+        agentName,
+      },
+    }
+  );
+
+  return { success: true, task: claimedTask ?? undefined };
+}
+
+/**
+ * Release a task claim
+ * Only the claiming agent can release their own claim
+ * @param taskId - Task UUID
+ * @param agentName - Name of the agent releasing the claim
+ * @returns ReleaseResult with success status
+ */
+export function releaseTask(taskId: string, agentName: string): ReleaseResult {
+  const db = getDb();
+  const task = getTask(taskId);
+
+  if (!task) {
+    return { success: false, reason: "not_found" };
+  }
+
+  if (task.claimedBy === null) {
+    return { success: false, reason: "not_claimed" };
+  }
+
+  if (task.claimedBy !== agentName) {
+    return { success: false, reason: "claimed_by_other" };
+  }
+
+  const now = new Date().toISOString();
+  db.prepare(`
+    UPDATE kanban_tasks
+    SET claimed_by = NULL, claimed_at = NULL, updated_at = ?
+    WHERE id = ? AND claimed_by = ?
+  `).run(now, taskId, agentName);
+
+  logActivity(
+    "task",
+    `Task "${task.title}" released by ${agentName}`,
+    "success",
+    {
+      metadata: {
+        taskId,
+        taskTitle: task.title,
+        agentName,
+      },
+    }
+  );
+
+  return { success: true };
+}
+
+/**
+ * Get workload statistics for an agent
+ * @param agentName - Name of the agent
+ * @returns AgentWorkload with counts by status
+ */
+export function getAgentWorkload(agentName: string): AgentWorkload {
+  const db = getDb();
+
+  const statusRows = db.prepare(`
+    SELECT status, COUNT(*) as n
+    FROM kanban_tasks
+    WHERE assignee = ?
+    GROUP BY status
+  `).all(agentName) as Array<{ status: string; n: number }>;
+
+  const claimedCount = (db.prepare(`
+    SELECT COUNT(*) as n
+    FROM kanban_tasks
+    WHERE claimed_by = ?
+  `).get(agentName) as { n: number }).n;
+
+  const byStatus: Record<string, number> = {
+    backlog: 0,
+    in_progress: 0,
+    done: 0,
+  };
+
+  for (const row of statusRows) {
+    if (row.status === "backlog" || row.status === "todo") {
+      byStatus.backlog += row.n;
+    } else if (row.status === "in_progress") {
+      byStatus.in_progress = row.n;
+    } else if (row.status === "done") {
+      byStatus.done = row.n;
+    } else if (row.status !== "review" && row.status !== "blocked" && row.status !== "waiting") {
+      byStatus.backlog += row.n;
+    }
+  }
+
+  return {
+    agentId: agentName,
+    todo: byStatus.backlog,
+    inProgress: byStatus.in_progress,
+    done: byStatus.done,
+    claimed: claimedCount,
+  };
+}
+
+/**
+ * Get all tasks claimed by an agent
+ * @param agentName - Name of the agent
+ * @returns Array of tasks claimed by the agent
+ */
+export function getTasksByClaimant(agentName: string): KanbanTask[] {
+  const db = getDb();
+  const rows = db.prepare(`
+    SELECT * FROM kanban_tasks
+    WHERE claimed_by = ?
+    ORDER BY claimed_at ASC
+  `).all(agentName) as Record<string, unknown>[];
+
+  return rows.map(parseTaskRow);
 }
 
 // ============================================================================
@@ -790,6 +1044,16 @@ function parseTaskRow(row: Record<string, unknown>): KanbanTask {
     projectId: (row.project_id as string | null) ?? null,
     created_at: row.created_at as string,
     updated_at: row.updated_at as string,
+    // New fields for dependencies and execution tracking
+    dueDate: (row.due_date as string | null) ?? null,
+    dependsOn: row.depends_on ? JSON.parse(row.depends_on as string) : null,
+    executionStatus: (row.execution_status as KanbanTask["executionStatus"]) ?? null,
+    executionResult: (row.execution_result as string | null) ?? null,
+    blockedBy: row.blocked_by ? JSON.parse(row.blocked_by as string) : null,
+    waitingFor: row.waiting_for ? JSON.parse(row.waiting_for as string) : null,
+    // Claim fields for multi-agent coordination
+    claimedBy: (row.claimed_by as string | null) ?? null,
+    claimedAt: (row.claimed_at as string | null) ?? null,
   };
 }
 

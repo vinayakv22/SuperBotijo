@@ -25,6 +25,14 @@ function createMockTask(overrides: Partial<KanbanTaskType> = {}): KanbanTaskType
     projectId: null,
     created_at: "2024-01-01T00:00:00.000Z",
     updated_at: "2024-01-01T00:00:00.000Z",
+    dueDate: null,
+    dependsOn: null,
+    executionStatus: null,
+    executionResult: null,
+    blockedBy: null,
+    waitingFor: null,
+    claimedBy: null,
+    claimedAt: null,
     ...overrides,
   };
 }
