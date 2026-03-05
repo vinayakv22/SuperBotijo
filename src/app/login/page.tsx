@@ -2,8 +2,8 @@
 
 import { useState, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { Terminal, Lock, AlertCircle } from "lucide-react";
-import { useI18n } from "@/i18n/provider";
+import { Lock, AlertCircle } from "lucide-react";
+import { useI18n, I18nProvider } from "@/i18n/provider";
 
 function LoginForm() {
   const [password, setPassword] = useState("");
@@ -42,35 +42,35 @@ function LoginForm() {
   };
 
   return (
-    <div 
+    <div
       className="rounded-xl p-10"
       style={{
-        backgroundColor: 'var(--card)',
-        border: '1px solid var(--border)',
+        backgroundColor: "var(--card)",
+        border: "1px solid var(--border)",
       }}
     >
       {/* Header */}
       <div className="text-center mb-6 flex flex-col items-center gap-2">
         <div className="flex items-center gap-2.5">
-          <img 
-            src="/logo.png" 
-            alt="SuperBotijo" 
+          <img
+            src="/logo.png"
+            alt="SuperBotijo"
             style={{ width: "40px", height: "40px", objectFit: "contain" }}
           />
-          <h1 
+          <h1
             className="text-xl font-bold"
-            style={{ 
-              fontFamily: 'var(--font-heading)',
-              color: 'var(--text-primary)',
-              letterSpacing: '-0.5px'
+            style={{
+              fontFamily: "var(--font-heading)",
+              color: "var(--text-primary)",
+              letterSpacing: "-0.5px",
             }}
           >
             SuperBotijo
           </h1>
         </div>
-        <p 
+        <p
           className="text-sm"
-          style={{ color: 'var(--text-secondary)' }}
+          style={{ color: "var(--text-secondary)" }}
         >
           {t("login.subtitle")}
         </p>
@@ -79,9 +79,9 @@ function LoginForm() {
       {/* Form */}
       <form onSubmit={handleSubmit} className="space-y-6">
         <div className="relative">
-          <Lock 
-            className="absolute left-4 top-1/2 -translate-y-1/2 w-[18px] h-[18px]" 
-            style={{ color: 'var(--text-muted)' }}
+          <Lock
+            className="absolute left-4 top-1/2 -translate-y-1/2 w-[18px] h-[18px]"
+            style={{ color: "var(--text-muted)" }}
           />
           <input
             type="password"
@@ -89,9 +89,9 @@ function LoginForm() {
             onChange={(e) => setPassword(e.target.value)}
             className="w-full pl-11 pr-4 py-3 rounded-lg text-sm"
             style={{
-              backgroundColor: 'var(--card-elevated)',
-              border: '1px solid var(--border)',
-              color: 'var(--text-primary)',
+              backgroundColor: "var(--card-elevated)",
+              border: "1px solid var(--border)",
+              color: "var(--text-primary)",
             }}
             placeholder={t("login.passwordPlaceholder")}
             required
@@ -99,11 +99,11 @@ function LoginForm() {
         </div>
 
         {error && (
-          <div 
+          <div
             className="flex items-center gap-2 text-sm px-4 py-3 rounded-lg"
             style={{
-              backgroundColor: 'var(--error-bg)',
-              color: 'var(--error)',
+              backgroundColor: "var(--error-bg)",
+              color: "var(--error)",
             }}
           >
             <AlertCircle className="w-4 h-4" />
@@ -116,8 +116,8 @@ function LoginForm() {
           disabled={loading}
           className="w-full font-semibold py-2.5 px-4 rounded-lg transition-colors disabled:opacity-50"
           style={{
-            backgroundColor: 'var(--accent)',
-            color: 'white',
+            backgroundColor: "var(--accent)",
+            color: "white",
           }}
         >
           {loading ? t("login.verifying") : t("login.signIn")}
@@ -125,9 +125,9 @@ function LoginForm() {
       </form>
 
       {/* Footer */}
-      <p 
+      <p
         className="text-center text-xs mt-6"
-        style={{ color: 'var(--text-muted)' }}
+        style={{ color: "var(--text-muted)" }}
       >
         {t("login.footer")}
       </p>
@@ -137,27 +137,31 @@ function LoginForm() {
 
 export default function LoginPage() {
   return (
-    <div 
-      className="min-h-screen flex items-center justify-center p-4 -ml-64"
-      style={{ backgroundColor: 'var(--background)' }}
-    >
-      <div className="w-full max-w-md">
-        <Suspense fallback={
-          <div 
-            className="rounded-xl p-10 animate-pulse"
-            style={{
-              backgroundColor: 'var(--card)',
-              border: '1px solid var(--border)',
-            }}
+    <I18nProvider>
+      <div
+        className="min-h-screen flex items-center justify-center p-4 -ml-64"
+        style={{ backgroundColor: "var(--background)" }}
+      >
+        <div className="w-full max-w-md">
+          <Suspense
+            fallback={
+              <div
+                className="rounded-xl p-10 animate-pulse"
+                style={{
+                  backgroundColor: "var(--card)",
+                  border: "1px solid var(--border)",
+                }}
+              >
+                <div className="h-8 bg-neutral-700 rounded mb-4" />
+                <div className="h-12 bg-neutral-700 rounded mb-4" />
+                <div className="h-10 bg-neutral-700 rounded" />
+              </div>
+            }
           >
-            <div className="h-8 bg-neutral-700 rounded mb-4" />
-            <div className="h-12 bg-neutral-700 rounded mb-4" />
-            <div className="h-10 bg-neutral-700 rounded" />
-          </div>
-        }>
-          <LoginForm />
-        </Suspense>
+            <LoginForm />
+          </Suspense>
+        </div>
       </div>
-    </div>
+    </I18nProvider>
   );
 }
