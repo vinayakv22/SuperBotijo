@@ -4,17 +4,13 @@ import { useState, useEffect, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import {
-  Rocket,
   ToggleLeft,
   ToggleRight,
   Eye,
   History,
   RefreshCw,
   AlertCircle,
-  CheckCircle2,
-  Clock,
   Bot,
-  Loader2,
   ExternalLink,
   Settings,
   Target,
@@ -51,6 +47,32 @@ interface Execution {
   durationMs: number | null;
 }
 
+interface AgentWorkload {
+  agentId: string;
+  todo: number;
+  inProgress: number;
+  done: number;
+  claimed: number;
+}
+
+function stringToColor(str: string): string {
+  let hash = 0;
+  for (let i = 0; i < str.length; i++) {
+    hash = str.charCodeAt(i) + ((hash << 5) - hash);
+  }
+  const hue = Math.abs(hash % 360);
+  return `hsl(${hue}, 70%, 50%)`;
+}
+
+function getInitials(name: string): string {
+  return name
+    .split(" ")
+    .map((part) => part[0])
+    .join("")
+    .toUpperCase()
+    .slice(0, 2);
+}
+
 const STATUS_COLORS: Record<string, string> = {
   success: "var(--success)",
   error: "var(--error)",
@@ -71,6 +93,7 @@ export default function AutonomyPage() {
   const [settings, setSettings] = useState<AutonomySettings | null>(null);
   const [tasks, setTasks] = useState<Task[]>([]);
   const [executions, setExecutions] = useState<Execution[]>([]);
+  const [workloads, setWorkloads] = useState<AgentWorkload[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
@@ -81,10 +104,11 @@ export default function AutonomyPage() {
       setLoading(true);
       setError(null);
 
-      const [settingsRes, tasksRes, executionsRes] = await Promise.all([
+      const [settingsRes, tasksRes, executionsRes, workloadsRes] = await Promise.all([
         fetch("/api/heartbeat/autonomy"),
         fetch("/api/heartbeat/tasks"),
         fetch("/api/heartbeat/executions?limit=20"),
+        fetch("/api/agents/workload"),
       ]);
 
       if (!settingsRes.ok || !tasksRes.ok || !executionsRes.ok) {
@@ -94,10 +118,12 @@ export default function AutonomyPage() {
       const settingsData = await settingsRes.json();
       const tasksData = await tasksRes.json();
       const executionsData = await executionsRes.json();
+      const workloadsData = workloadsRes.ok ? await workloadsRes.json() : { workloads: [] };
 
       setSettings(settingsData);
       setTasks(tasksData.tasks || []);
       setExecutions(executionsData.executions || []);
+      setWorkloads(workloadsData.workloads || []);
     } catch (err) {
       console.error("Failed to fetch autonomy data:", err);
       setError(err instanceof Error ? err.message : "Failed to load autonomy data");
@@ -486,6 +512,88 @@ export default function AutonomyPage() {
               </div>
             )}
           </>
+        )}
+      </div>
+
+      {/* Workload Section */}
+      <div
+        className="mt-6 rounded-xl p-4"
+        style={{ backgroundColor: "var(--card)", border: "1px solid var(--border)" }}
+      >
+        <div className="flex items-center justify-between mb-3">
+          <h3
+            className="text-sm font-semibold"
+            style={{ color: "var(--text-muted)" }}
+          >
+            Agent Workload
+          </h3>
+          <button
+            onClick={fetchData}
+            className="rounded-lg p-1"
+            style={{ color: "var(--accent)" }}
+          >
+            <RefreshCw className="h-4 w-4" />
+          </button>
+        </div>
+
+        {loading ? (
+          <div className="py-4 text-center" style={{ color: "var(--text-muted)" }}>
+            Loading...
+          </div>
+        ) : workloads.length === 0 ? (
+          <div className="py-4 text-center" style={{ color: "var(--text-muted)" }}>
+            No agents with workload data
+          </div>
+        ) : (
+          <div className="grid gap-3 md:grid-cols-2 lg:grid-cols-3">
+            {workloads.map((workload) => (
+              <div
+                key={workload.agentId}
+                className="flex items-center justify-between gap-3 p-3 rounded-lg"
+                style={{ backgroundColor: "var(--surface-elevated)" }}
+              >
+                <div className="flex items-center gap-2">
+                  <div
+                    className="flex h-8 w-8 items-center justify-center rounded-full text-xs font-bold"
+                    style={{
+                      backgroundColor: stringToColor(workload.agentId),
+                      color: "white",
+                    }}
+                  >
+                    {getInitials(workload.agentId)}
+                  </div>
+                  <div className="flex flex-col">
+                    <span style={{ color: "var(--text-primary)", fontWeight: 500 }}>
+                      {workload.agentId}
+                    </span>
+                    <span style={{ color: "var(--text-muted)", fontSize: "0.75rem" }}>
+                      {workload.claimed} claimed
+                    </span>
+                  </div>
+                </div>
+                <div className="flex gap-3 text-xs">
+                  <div className="flex flex-col items-center">
+                    <span className="font-bold" style={{ color: "var(--text-primary)" }}>
+                      {workload.todo}
+                    </span>
+                    <span style={{ color: "var(--text-muted)" }}>To Do</span>
+                  </div>
+                  <div className="flex flex-col items-center">
+                    <span className="font-bold" style={{ color: "var(--info)" }}>
+                      {workload.inProgress}
+                    </span>
+                    <span style={{ color: "var(--text-muted)" }}>In Progress</span>
+                  </div>
+                  <div className="flex flex-col items-center">
+                    <span className="font-bold" style={{ color: "var(--success)" }}>
+                      {workload.done}
+                    </span>
+                    <span style={{ color: "var(--text-muted)" }}>Done</span>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
         )}
       </div>
 

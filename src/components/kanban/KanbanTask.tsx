@@ -1,6 +1,6 @@
 "use client";
 
-import { GripVertical, AlertCircle } from "lucide-react";
+import { GripVertical, AlertCircle, Lock, Clock } from "lucide-react";
 import { motion } from "framer-motion";
 import type { KanbanTask as KanbanTaskType, KanbanLabel } from "@/lib/kanban-db";
 
@@ -113,32 +113,53 @@ export function KanbanTask({ task, onClick, onDragStart, onDragEnd, isDragging }
             </div>
           )}
 
-          {/* Footer: Priority + Assignee */}
-          <div className="mt-3 flex items-center justify-between">
-            <span
-              className="flex items-center gap-1 rounded px-1.5 py-0.5 text-xs font-medium"
-              style={{
-                backgroundColor: priorityConfig.bgColor,
-                color: priorityConfig.color,
-              }}
-            >
-              {task.priority === "critical" && <AlertCircle className="h-3 w-3" />}
-              {task.priority}
-            </span>
+           {/* Claimed indicator */}
+           {task.claimedBy && (
+             <div
+               className="mb-2 flex items-center gap-1.5 rounded px-2 py-1 text-xs"
+               style={{
+                 backgroundColor: "rgba(255, 214, 10, 0.1)",
+                 color: "var(--warning)",
+                 border: "1px solid rgba(255, 214, 10, 0.3)",
+               }}
+             >
+               <Lock className="h-3 w-3" />
+               <span>Claimed by {task.claimedBy}</span>
+               {task.claimedAt && (
+                 <span style={{ color: "var(--text-muted)" }}>
+                   <Clock className="h-3 w-3 ml-1 inline" />
+                   {new Date(task.claimedAt).toLocaleTimeString()}
+                 </span>
+               )}
+             </div>
+           )}
 
-            {task.assignee && (
-              <div
-                className="flex h-6 w-6 items-center justify-center rounded-full text-xs font-bold"
-                style={{
-                  backgroundColor: stringToColor(task.assignee),
-                  color: "white",
-                }}
-                title={task.assignee}
-              >
-                {getInitials(task.assignee)}
-              </div>
-            )}
-          </div>
+           {/* Footer: Priority + Assignee */}
+           <div className="mt-3 flex items-center justify-between">
+             <span
+               className="flex items-center gap-1 rounded px-1.5 py-0.5 text-xs font-medium"
+               style={{
+                 backgroundColor: priorityConfig.bgColor,
+                 color: priorityConfig.color,
+               }}
+             >
+               {task.priority === "critical" && <AlertCircle className="h-3 w-3" />}
+               {task.priority}
+             </span>
+
+             {task.assignee && (
+               <div
+                 className="flex h-6 w-6 items-center justify-center rounded-full text-xs font-bold"
+                 style={{
+                   backgroundColor: stringToColor(task.assignee),
+                   color: "white",
+                 }}
+                 title={task.assignee}
+               >
+                 {getInitials(task.assignee)}
+               </div>
+             )}
+           </div>
         </div>
       </motion.div>
     </div>
