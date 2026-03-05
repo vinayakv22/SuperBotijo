@@ -146,15 +146,15 @@ export default function AnalyticsPage() {
   }, [fetchFlowData, activeTab]);
 
   const tabs: Array<{ id: Tab; label: string; icon: typeof BarChart3 }> = [
-    { id: "overview", label: "Overview", icon: BarChart3 },
-    { id: "flows", label: "Flows", icon: GitBranch },
-    { id: "costs", label: "Costs", icon: DollarSign },
+    { id: "overview", label: t("analytics.overview"), icon: BarChart3 },
+    { id: "flows", label: t("analytics.flows"), icon: GitBranch },
+    { id: "costs", label: t("analytics.costs"), icon: DollarSign },
   ];
 
   const flowTabs: Array<{ id: FlowType; label: string; icon: string }> = [
-    { id: "token", label: "Token Flow", icon: "📊" },
-    { id: "task", label: "Task Flow", icon: "✅" },
-    { id: "time", label: "Time Flow", icon: "⏰" },
+    { id: "token", label: t("analytics.tokenFlow"), icon: "📊" },
+    { id: "task", label: t("analytics.taskFlow"), icon: "✅" },
+    { id: "time", label: t("analytics.timeFlow"), icon: "⏰" },
   ];
 
   return (
@@ -165,10 +165,10 @@ export default function AnalyticsPage() {
           className="text-2xl md:text-3xl font-bold mb-2"
           style={{ color: "var(--text-primary)", fontFamily: "var(--font-heading)" }}
         >
-          📊 Analytics
+          {t("analytics.title")}
         </h1>
         <p className="text-sm md:text-base" style={{ color: "var(--text-secondary)" }}>
-          Insights, trends, and costs from agent activity
+          {t("analytics.subtitle")}
         </p>
       </div>
 
@@ -204,12 +204,12 @@ export default function AnalyticsPage() {
                   className="w-8 h-8 border-2 border-t-transparent rounded-full animate-spin"
                   style={{ borderColor: "var(--accent)", borderTopColor: "transparent" }}
                 />
-                <span style={{ color: "var(--text-secondary)" }}>Loading analytics...</span>
+                <span style={{ color: "var(--text-secondary)" }}>{t("analytics.loading")}</span>
               </div>
             </div>
           ) : !data ? (
             <div className="p-4">
-              <p style={{ color: "var(--error)" }}>Failed to load analytics data</p>
+              <p style={{ color: "var(--error)" }}>{t("analytics.loadError")}</p>
             </div>
           ) : (
             <>
@@ -218,7 +218,7 @@ export default function AnalyticsPage() {
                   className="rounded-xl p-3 md:p-4"
                   style={{ backgroundColor: "var(--card)", border: "1px solid var(--border)" }}
                 >
-                  <p className="text-xs md:text-sm mb-1" style={{ color: "var(--text-secondary)" }}>Total This Week</p>
+                  <p className="text-xs md:text-sm mb-1" style={{ color: "var(--text-secondary)" }}>{t("analytics.totalThisWeek")}</p>
                   <p className="text-xl md:text-2xl font-bold" style={{ color: "var(--text-primary)" }}>
                     {data.byDay.reduce((sum, d) => sum + d.count, 0)}
                   </p>
@@ -227,7 +227,7 @@ export default function AnalyticsPage() {
                   className="rounded-xl p-3 md:p-4"
                   style={{ backgroundColor: "var(--card)", border: "1px solid var(--border)" }}
                 >
-                  <p className="text-xs md:text-sm mb-1" style={{ color: "var(--text-secondary)" }}>Most Active Day</p>
+                  <p className="text-xs md:text-sm mb-1" style={{ color: "var(--text-secondary)" }}>{t("analytics.mostActiveDay")}</p>
                   <p className="text-xl md:text-2xl font-bold" style={{ color: "var(--accent)" }}>
                     {data.byDay.reduce((max, d) => (d.count > max.count ? d : max), data.byDay[0])?.date || "-"}
                   </p>
@@ -236,7 +236,7 @@ export default function AnalyticsPage() {
                   className="rounded-xl p-3 md:p-4"
                   style={{ backgroundColor: "var(--card)", border: "1px solid var(--border)" }}
                 >
-                  <p className="text-xs md:text-sm mb-1" style={{ color: "var(--text-secondary)" }}>Top Activity Type</p>
+                  <p className="text-xs md:text-sm mb-1" style={{ color: "var(--text-secondary)" }}>{t("analytics.topActivityType")}</p>
                   <p className="text-xl md:text-2xl font-bold capitalize" style={{ color: "var(--info)" }}>
                     {data.byType[0]?.type || "-"}
                   </p>
@@ -245,7 +245,7 @@ export default function AnalyticsPage() {
                   className="rounded-xl p-3 md:p-4"
                   style={{ backgroundColor: "var(--card)", border: "1px solid var(--border)" }}
                 >
-                  <p className="text-xs md:text-sm mb-1" style={{ color: "var(--text-secondary)" }}>Success Rate</p>
+                  <p className="text-xs md:text-sm mb-1" style={{ color: "var(--text-secondary)" }}>{t("analytics.successRate")}</p>
                   <p className="text-xl md:text-2xl font-bold" style={{ color: "var(--success)" }}>
                     {data.successRate.toFixed(0)}%
                   </p>
@@ -263,7 +263,7 @@ export default function AnalyticsPage() {
                       className="text-lg md:text-xl font-bold"
                       style={{ color: "var(--text-primary)", fontFamily: "var(--font-heading)" }}
                     >
-                      Activity Over Time
+                      {t("analytics.activityOverTime")}
                     </h2>
                   </div>
                   <ActivityLineChart data={data.byDay} />
@@ -279,7 +279,7 @@ export default function AnalyticsPage() {
                       className="text-lg md:text-xl font-bold"
                       style={{ color: "var(--text-primary)", fontFamily: "var(--font-heading)" }}
                     >
-                      Activity by Type
+                      {t("analytics.activityByType")}
                     </h2>
                   </div>
                   <ActivityPieChart data={data.byType} />
@@ -295,7 +295,7 @@ export default function AnalyticsPage() {
                       className="text-lg md:text-xl font-bold"
                       style={{ color: "var(--text-primary)", fontFamily: "var(--font-heading)" }}
                     >
-                      Activity by Hour
+                      {t("analytics.activityByHour")}
                     </h2>
                   </div>
                   <HourlyHeatmap data={data.byHour} />
@@ -311,7 +311,7 @@ export default function AnalyticsPage() {
                       className="text-lg md:text-xl font-bold"
                       style={{ color: "var(--text-primary)", fontFamily: "var(--font-heading)" }}
                     >
-                      Success Rate
+                      {t("analytics.successRate")}
                     </h2>
                   </div>
                   <SuccessRateGauge rate={data.successRate} />
@@ -352,9 +352,9 @@ export default function AnalyticsPage() {
                   color: "var(--text-primary)",
                 }}
               >
-                <option value="day">Today</option>
-                <option value="week">This Week</option>
-                <option value="month">This Month</option>
+                <option value="day">{t("analytics.today")}</option>
+                <option value="week">{t("analytics.thisWeek")}</option>
+                <option value="month">{t("analytics.thisMonth")}</option>
               </select>
               <button
                 onClick={fetchFlowData}
@@ -380,7 +380,7 @@ export default function AnalyticsPage() {
               <div className="flex items-center justify-center h-[300px]">
                 <div className="text-center">
                   <Loader2 size={32} className="animate-spin mb-3" style={{ color: "var(--accent)" }} />
-                  <p style={{ color: "var(--text-muted)" }}>Loading flow data...</p>
+                  <p style={{ color: "var(--text-muted)" }}>{t("analytics.loadingFlow")}</p>
                 </div>
               </div>
             ) : flowError ? (
@@ -415,7 +415,7 @@ export default function AnalyticsPage() {
                     color: timeframe === tf ? "white" : "var(--text-secondary)",
                   }}
                 >
-                  {tf === "7d" ? "7 days" : tf === "30d" ? "30 days" : "90 days"}
+                  {tf === "7d" ? t("analytics.days7") : tf === "30d" ? t("analytics.days30") : t("analytics.days90")}
                 </button>
               ))}
             </div>
@@ -438,14 +438,14 @@ export default function AnalyticsPage() {
             <div className="flex items-center justify-center min-h-[400px]">
               <div className="text-center">
                 <div className="animate-spin rounded-full h-12 w-12 border-b-2 mx-auto mb-4" style={{ borderColor: "var(--accent)" }}></div>
-                <p style={{ color: "var(--text-secondary)" }}>Loading cost data...</p>
+                <p style={{ color: "var(--text-secondary)" }}>{t("analytics.loadingCosts")}</p>
               </div>
             </div>
           ) : !costData ? (
             <div className="flex items-center justify-center min-h-[400px]">
               <div className="text-center">
                 <DollarSign className="w-16 h-16 mx-auto mb-4" style={{ color: "var(--text-muted)" }} />
-                <p style={{ color: "var(--text-secondary)" }}>Failed to load cost data</p>
+                <p style={{ color: "var(--text-secondary)" }}>{t("analytics.loadCostsError")}</p>
               </div>
             </div>
           ) : (
@@ -453,7 +453,7 @@ export default function AnalyticsPage() {
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
                 <div className="p-6 rounded-xl" style={{ backgroundColor: "var(--card)", border: "1px solid var(--border)" }}>
                   <div className="flex items-center justify-between mb-2">
-                    <span className="text-sm" style={{ color: "var(--text-secondary)" }}>Today</span>
+                    <span className="text-sm" style={{ color: "var(--text-secondary)" }}>{t("analytics.costToday")}</span>
                     {costData.yesterday > 0 && (
                       <div className="flex items-center gap-1">
                         {((costData.today - costData.yesterday) / costData.yesterday) * 100 > 0 ? (
@@ -468,33 +468,33 @@ export default function AnalyticsPage() {
                     ${costData.today.toFixed(2)}
                   </div>
                   <p className="text-xs mt-1" style={{ color: "var(--text-muted)" }}>
-                    vs ${costData.yesterday.toFixed(2)} yesterday
+                    {t("analytics.vsYesterday", { amount: costData.yesterday.toFixed(2) })}
                   </p>
                 </div>
 
                 <div className="p-6 rounded-xl" style={{ backgroundColor: "var(--card)", border: "1px solid var(--border)" }}>
-                  <span className="text-sm" style={{ color: "var(--text-secondary)" }}>This Month</span>
+                  <span className="text-sm" style={{ color: "var(--text-secondary)" }}>{t("analytics.costThisMonth")}</span>
                   <div className="text-3xl font-bold" style={{ color: "var(--text-primary)" }}>
                     ${costData.thisMonth.toFixed(2)}
                   </div>
                   <p className="text-xs mt-1" style={{ color: "var(--text-muted)" }}>
-                    vs ${costData.lastMonth.toFixed(2)} last month
+                    {t("analytics.vsLastMonth", { amount: costData.lastMonth.toFixed(2) })}
                   </p>
                 </div>
 
                 <div className="p-6 rounded-xl" style={{ backgroundColor: "var(--card)", border: "1px solid var(--border)" }}>
-                  <span className="text-sm" style={{ color: "var(--text-secondary)" }}>Projected (EOM)</span>
+                  <span className="text-sm" style={{ color: "var(--text-secondary)" }}>{t("analytics.projectedEom")}</span>
                   <div className="text-3xl font-bold" style={{ color: "var(--warning)" }}>
                     ${costData.projected.toFixed(2)}
                   </div>
                   <p className="text-xs mt-1" style={{ color: "var(--text-muted)" }}>
-                    Based on current pace
+                    {t("analytics.basedOnPace")}
                   </p>
                 </div>
 
                 <div className="p-6 rounded-xl" style={{ backgroundColor: "var(--card)", border: "1px solid var(--border)" }}>
                   <div className="flex items-center justify-between mb-2">
-                    <span className="text-sm" style={{ color: "var(--text-secondary)" }}>Budget</span>
+                    <span className="text-sm" style={{ color: "var(--text-secondary)" }}>{t("analytics.budget")}</span>
                     <div className="flex items-center gap-2">
                       {(costData.thisMonth / costData.budget) * 100 > 80 && (
                         <AlertTriangle className="w-4 h-4" style={{ color: "var(--error)" }} />
@@ -506,7 +506,7 @@ export default function AnalyticsPage() {
                             setEditingBudget(true);
                           }}
                           className="p-1 rounded hover:bg-white/10 transition-colors"
-                          title="Edit budget"
+                          title={t("analytics.editBudget")}
                         >
                           <Pencil className="w-3 h-3" style={{ color: "var(--text-muted)" }} />
                         </button>
@@ -574,7 +574,7 @@ export default function AnalyticsPage() {
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                 <div className="p-6 rounded-xl" style={{ backgroundColor: "var(--card)", border: "1px solid var(--border)" }}>
                   <h3 className="text-lg font-semibold mb-4" style={{ color: "var(--text-primary)" }}>
-                    Daily Cost Trend
+                    {t("analytics.dailyCostTrend")}
                   </h3>
                   <ResponsiveContainer width="100%" height={300}>
                     <LineChart data={costData.daily}>
@@ -596,7 +596,7 @@ export default function AnalyticsPage() {
 
                 <div className="p-6 rounded-xl" style={{ backgroundColor: "var(--card)", border: "1px solid var(--border)" }}>
                   <h3 className="text-lg font-semibold mb-4" style={{ color: "var(--text-primary)" }}>
-                    Cost by Agent
+                    {t("analytics.costByAgent")}
                   </h3>
                   <ResponsiveContainer width="100%" height={300}>
                     <BarChart data={costData.byAgent}>
@@ -617,7 +617,7 @@ export default function AnalyticsPage() {
 
                 <div className="p-6 rounded-xl" style={{ backgroundColor: "var(--card)", border: "1px solid var(--border)" }}>
                   <h3 className="text-lg font-semibold mb-4" style={{ color: "var(--text-primary)" }}>
-                    Cost by Model
+                    {t("analytics.costByModel")}
                   </h3>
                   <ResponsiveContainer width="100%" height={300}>
                     <RePieChart>
@@ -647,7 +647,7 @@ export default function AnalyticsPage() {
 
                 <div className="p-6 rounded-xl" style={{ backgroundColor: "var(--card)", border: "1px solid var(--border)" }}>
                   <h3 className="text-lg font-semibold mb-4" style={{ color: "var(--text-primary)" }}>
-                    Token Usage (Daily)
+                    {t("analytics.tokenUsageDaily")}
                   </h3>
                   <ResponsiveContainer width="100%" height={300}>
                     <BarChart data={costData.daily}>
@@ -673,18 +673,18 @@ export default function AnalyticsPage() {
 
               <div className="p-6 rounded-xl" style={{ backgroundColor: "var(--card)", border: "1px solid var(--border)" }}>
                 <h3 className="text-lg font-semibold mb-4" style={{ color: "var(--text-primary)" }}>
-                  Model Pricing (per 1M tokens)
+                  {t("analytics.modelPricing")}
                 </h3>
                 <div className="overflow-x-auto">
                   <table className="w-full">
                     <thead>
                       <tr style={{ borderBottom: "1px solid var(--border)" }}>
                         <th className="text-left py-3 px-4 text-sm font-medium" style={{ color: "var(--text-secondary)" }}>Model</th>
-                        <th className="text-right py-3 px-4 text-sm font-medium" style={{ color: "var(--text-secondary)" }}>Input</th>
-                        <th className="text-right py-3 px-4 text-sm font-medium" style={{ color: "var(--text-secondary)" }}>Output</th>
-                        <th className="text-right py-3 px-4 text-sm font-medium" style={{ color: "var(--text-secondary)" }}>Cache Read</th>
-                        <th className="text-right py-3 px-4 text-sm font-medium" style={{ color: "var(--text-secondary)" }}>Cache Write</th>
-                        <th className="text-right py-3 px-4 text-sm font-medium" style={{ color: "var(--text-secondary)" }}>Context</th>
+                        <th className="text-right py-3 px-4 text-sm font-medium" style={{ color: "var(--text-secondary)" }}>{t("analytics.input")}</th>
+                        <th className="text-right py-3 px-4 text-sm font-medium" style={{ color: "var(--text-secondary)" }}>{t("analytics.output")}</th>
+                        <th className="text-right py-3 px-4 text-sm font-medium" style={{ color: "var(--text-secondary)" }}>{t("analytics.cacheRead")}</th>
+                        <th className="text-right py-3 px-4 text-sm font-medium" style={{ color: "var(--text-secondary)" }}>{t("analytics.cacheWrite")}</th>
+                        <th className="text-right py-3 px-4 text-sm font-medium" style={{ color: "var(--text-secondary)" }}>{t("analytics.context")}</th>
                       </tr>
                     </thead>
                     <tbody>
@@ -711,16 +711,16 @@ export default function AnalyticsPage() {
 
               <div className="p-6 rounded-xl" style={{ backgroundColor: "var(--card)", border: "1px solid var(--border)" }}>
                 <h3 className="text-lg font-semibold mb-4" style={{ color: "var(--text-primary)" }}>
-                  Detailed Breakdown by Agent
+                  {t("analytics.detailedBreakdown")}
                 </h3>
                 <div className="overflow-x-auto">
                   <table className="w-full">
                     <thead>
                       <tr style={{ borderBottom: "1px solid var(--border)" }}>
-                        <th className="text-left py-3 px-4 text-sm font-medium" style={{ color: "var(--text-secondary)" }}>Agent</th>
-                        <th className="text-right py-3 px-4 text-sm font-medium" style={{ color: "var(--text-secondary)" }}>Tokens</th>
-                        <th className="text-right py-3 px-4 text-sm font-medium" style={{ color: "var(--text-secondary)" }}>Cost</th>
-                        <th className="text-right py-3 px-4 text-sm font-medium" style={{ color: "var(--text-secondary)" }}>% of Total</th>
+                        <th className="text-left py-3 px-4 text-sm font-medium" style={{ color: "var(--text-secondary)" }}>{t("analytics.agent")}</th>
+                        <th className="text-right py-3 px-4 text-sm font-medium" style={{ color: "var(--text-secondary)" }}>{t("analytics.tokensCol")}</th>
+                        <th className="text-right py-3 px-4 text-sm font-medium" style={{ color: "var(--text-secondary)" }}>{t("analytics.cost")}</th>
+                        <th className="text-right py-3 px-4 text-sm font-medium" style={{ color: "var(--text-secondary)" }}>{t("analytics.percentOfTotal")}</th>
                       </tr>
                     </thead>
                     <tbody>
