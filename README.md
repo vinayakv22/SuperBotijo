@@ -363,7 +363,10 @@ superbotijo/
 | Skills | 7 | CRUD, toggle, ClawHub |
 | Workflows | 5 | CRUD, execute |
 | System | 6 | Info, monitor, services |
-| Other | 20+ | Weather, git, logs, etc. |
+| **Kanban** | 8 | CRUD, columns, move tasks, task dependencies, blocked/waiting states |
+| **OpenClaw Agents** | 2 | GET agents, POST sync to projects |
+| **Tasks** | 1 | Unified tasks API (cron + heartbeat + scheduled) |
+| Other | 17 | Weather, git, logs, etc. |
 
 **See [ARCHITECTURE.md](./ARCHITECTURE.md#api-reference) for complete API documentation.**
 
@@ -476,6 +479,8 @@ Compared to the original TenecitOS:
 | Git Dashboard | Repository management |
 | Log Streaming | Real-time log viewer |
 | i18n | English + Spanish support |
+| **Task Management** | Kanban with dependencies, blocked/waiting states, agent assignment |
+| **OpenClaw Agents API** | Auto-detect and sync agents to projects |
 
 ---
 

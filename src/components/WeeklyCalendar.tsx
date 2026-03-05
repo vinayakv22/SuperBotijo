@@ -10,16 +10,24 @@ import {
   subWeeks,
 } from "date-fns";
 import { ChevronLeft, ChevronRight, Calendar } from "lucide-react";
+import { useI18n } from "@/i18n/provider";
 
 interface Task {
   id: string;
   name: string;
+  type: "cron" | "heartbeat" | "scheduled";
+  agentId?: string;
   schedule: string;
-  description: string;
-  nextRun: string;
+  scheduleDisplay: string;
+  enabled: boolean;
+  nextRun: string | null;
+  lastRun: string | null;
+  description?: string;
+  status?: "success" | "error" | "running" | "pending";
 }
 
 export function WeeklyCalendar() {
+  const { t } = useI18n();
   const [tasks, setTasks] = useState<Task[]>([]);
   const [currentWeekStart, setCurrentWeekStart] = useState(() =>
     startOfWeek(new Date(), { weekStartsOn: 1 })
@@ -28,7 +36,11 @@ export function WeeklyCalendar() {
   useEffect(() => {
     fetch("/api/tasks")
       .then((res) => res.json())
-      .then(setTasks)
+      .then((data) => {
+        if (Array.isArray(data)) {
+          setTasks(data.filter((task: Task) => task.nextRun));
+        }
+      })
       .catch(() => setTasks([]));
   }, []);
 
@@ -37,6 +49,7 @@ export function WeeklyCalendar() {
 
   const getTasksForDayAndHour = (day: Date, hour: number) => {
     return tasks.filter((task) => {
+      if (!task.nextRun) return false;
       const taskDate = new Date(task.nextRun);
       return isSameDay(taskDate, day) && taskDate.getHours() === hour;
     });
@@ -47,61 +60,112 @@ export function WeeklyCalendar() {
   const goToToday = () => setCurrentWeekStart(startOfWeek(new Date(), { weekStartsOn: 1 }));
 
   return (
-    <div className="bg-neutral-900 rounded-xl overflow-hidden">
+    <div
+      style={{
+        backgroundColor: "var(--card)",
+        borderRadius: "0.75rem",
+        overflow: "hidden",
+      }}
+    >
       {/* Header */}
-      <div className="flex items-center justify-between p-4 border-b border-neutral-800">
-        <div className="flex items-center gap-4">
+      <div
+        style={{
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "space-between",
+          padding: "1rem",
+          borderBottom: "1px solid var(--border)",
+        }}
+      >
+        <div style={{ display: "flex", alignItems: "center", gap: "1rem" }}>
           <button
             onClick={goToPreviousWeek}
-            className="p-2 hover:bg-neutral-800 rounded-lg transition-colors"
+            style={{
+              padding: "0.5rem",
+              backgroundColor: "var(--card-elevated)",
+              borderRadius: "0.5rem",
+              border: "none",
+              cursor: "pointer",
+            }}
           >
-            <ChevronLeft className="w-5 h-5 text-neutral-400" />
+            <ChevronLeft className="w-5 h-5" style={{ color: "var(--text-secondary)" }} />
           </button>
           <button
             onClick={goToNextWeek}
-            className="p-2 hover:bg-neutral-800 rounded-lg transition-colors"
+            style={{
+              padding: "0.5rem",
+              backgroundColor: "var(--card-elevated)",
+              borderRadius: "0.5rem",
+              border: "none",
+              cursor: "pointer",
+            }}
           >
-            <ChevronRight className="w-5 h-5 text-neutral-400" />
+            <ChevronRight className="w-5 h-5" style={{ color: "var(--text-secondary)" }} />
           </button>
           <button
             onClick={goToToday}
-            className="px-3 py-1.5 text-sm bg-neutral-800 hover:bg-neutral-700 text-neutral-300 rounded-lg transition-colors"
+            style={{
+              padding: "0.375rem 0.75rem",
+              fontSize: "0.875rem",
+              backgroundColor: "var(--card-elevated)",
+              color: "var(--text-secondary)",
+              borderRadius: "0.5rem",
+              border: "1px solid var(--border)",
+              cursor: "pointer",
+            }}
           >
-            Today
+            {t("calendar.today")}
           </button>
         </div>
 
-        <h2 className="text-lg font-medium text-white">
+        <h2
+          style={{
+            fontSize: "1.125rem",
+            fontWeight: 500,
+            color: "var(--text-primary)",
+          }}
+        >
           {format(currentWeekStart, "MMMM yyyy")}
         </h2>
 
-        <div className="flex items-center gap-2 text-sm text-neutral-400">
+        <div style={{ display: "flex", alignItems: "center", gap: "0.5rem", fontSize: "0.875rem", color: "var(--text-secondary)" }}>
           <Calendar className="w-4 h-4" />
-          <span>{tasks.length} scheduled tasks</span>
+          <span>{tasks.length} {t("calendar.scheduledTasks")}</span>
         </div>
       </div>
 
       {/* Day Headers */}
-      <div className="grid grid-cols-8 border-b border-neutral-800">
-        <div className="p-3 text-center text-sm text-neutral-500 border-r border-neutral-800">
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(8, 1fr)", borderBottom: "1px solid var(--border)" }}>
+        <div
+          style={{
+            padding: "0.75rem",
+            textAlign: "center",
+            fontSize: "0.875rem",
+            color: "var(--text-muted)",
+            borderRight: "1px solid var(--border)",
+          }}
+        >
           Time
         </div>
         {days.map((day) => (
           <div
             key={day.toISOString()}
-            className={`p-3 text-center border-r border-neutral-800 last:border-r-0 ${
-              isSameDay(day, new Date())
-                ? "bg-success/10"
-                : ""
-            }`}
+            style={{
+              padding: "0.75rem",
+              textAlign: "center",
+              borderRight: "1px solid var(--border)",
+              backgroundColor: isSameDay(day, new Date()) ? "color-mix(in srgb, var(--success) 10%, transparent)" : undefined,
+            }}
           >
-            <div className="text-xs text-neutral-500 uppercase">
+            <div style={{ fontSize: "0.75rem", color: "var(--text-muted)", textTransform: "uppercase" }}>
               {format(day, "EEE")}
             </div>
             <div
-              className={`text-lg font-medium ${
-                isSameDay(day, new Date()) ? "text-success" : "text-white"
-              }`}
+              style={{
+                fontSize: "1.125rem",
+                fontWeight: 500,
+                color: isSameDay(day, new Date()) ? "var(--success)" : "var(--text-primary)",
+              }}
             >
               {format(day, "d")}
             </div>
@@ -110,10 +174,26 @@ export function WeeklyCalendar() {
       </div>
 
       {/* Time Grid - Show 6am to 10pm */}
-      <div className="max-h-[600px] overflow-y-auto">
+      <div style={{ maxHeight: "600px", overflowY: "auto" }}>
         {hours.filter(h => h >= 6 && h <= 22).map((hour) => (
-          <div key={hour} className="grid grid-cols-8 border-b border-neutral-800 last:border-b-0">
-            <div className="p-2 text-xs text-neutral-500 text-right pr-3 border-r border-neutral-800">
+          <div
+            key={hour}
+            style={{
+              display: "grid",
+              gridTemplateColumns: "repeat(8, 1fr)",
+              borderBottom: "1px solid var(--border)",
+            }}
+          >
+            <div
+              style={{
+                padding: "0.5rem",
+                fontSize: "0.75rem",
+                color: "var(--text-muted)",
+                textAlign: "right",
+                paddingRight: "0.75rem",
+                borderRight: "1px solid var(--border)",
+              }}
+            >
               {format(new Date().setHours(hour, 0), "HH:mm")}
             </div>
             {days.map((day) => {
@@ -121,20 +201,45 @@ export function WeeklyCalendar() {
               return (
                 <div
                   key={`${day.toISOString()}-${hour}`}
-                  className={`p-1 min-h-[48px] border-r border-neutral-800 last:border-r-0 ${
-                    isSameDay(day, new Date()) ? "bg-success/5" : ""
-                  }`}
+                  style={{
+                    padding: "0.25rem",
+                    minHeight: "3rem",
+                    borderRight: "1px solid var(--border)",
+                    backgroundColor: isSameDay(day, new Date()) ? "color-mix(in srgb, var(--success) 5%, transparent)" : undefined,
+                  }}
                 >
                   {dayTasks.map((task) => (
                     <div
                       key={task.id}
-                      className="bg-success/20 border-l-2 border-success px-2 py-1 rounded text-xs mb-1"
+                      style={{
+                        backgroundColor: "color-mix(in srgb, var(--accent) 20%, transparent)",
+                        borderLeft: "2px solid var(--accent)",
+                        padding: "0.25rem 0.5rem",
+                        borderRadius: "0.25rem",
+                        fontSize: "0.75rem",
+                        marginBottom: "0.25rem",
+                      }}
                     >
-                      <div className="font-medium text-success truncate">
+                      <div
+                        style={{
+                          fontWeight: 500,
+                          color: "var(--accent)",
+                          overflow: "hidden",
+                          textOverflow: "ellipsis",
+                          whiteSpace: "nowrap",
+                        }}
+                      >
                         {task.name}
                       </div>
-                      <div className="text-neutral-500 truncate">
-                        {task.schedule}
+                      <div
+                        style={{
+                          color: "var(--text-muted)",
+                          overflow: "hidden",
+                          textOverflow: "ellipsis",
+                          whiteSpace: "nowrap",
+                        }}
+                      >
+                        {task.scheduleDisplay || task.schedule}
                       </div>
                     </div>
                   ))}

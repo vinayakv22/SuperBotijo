@@ -23,6 +23,7 @@ import {
 } from "@/components/SystemCronCard";
 import { HeartbeatStatus } from "@/components/HeartbeatStatus";
 import type { SystemCronJob } from "@/app/api/cron/system/route";
+import { useI18n } from "@/i18n/provider";
 
 type ViewMode = "cards" | "timeline";
 type CronTab = "all" | "system" | "openclaw" | "heartbeat";
@@ -38,6 +39,7 @@ interface HeartbeatData {
 }
 
 export default function CronJobsPage() {
+  const { t } = useI18n();
   const [jobs, setJobs] = useState<CronJob[]>([]);
   const [systemJobs, setSystemJobs] = useState<SystemCronJob[]>([]);
   const [heartbeat, setHeartbeat] = useState<HeartbeatData | null>(null);
@@ -225,8 +227,8 @@ export default function CronJobsPage() {
       setSaveToast({
         status: "success",
         message: isEditing
-          ? `Job "${jobData.name}" updated!`
-          : `Job "${jobData.name}" created!`,
+          ? t("cron.jobUpdated")
+          : t("cron.jobCreated"),
       });
       setTimeout(() => setSaveToast(null), 4000);
 
@@ -302,7 +304,7 @@ export default function CronJobsPage() {
                 fontFamily: "var(--font-heading)",
               }}
             >
-              7-Day Schedule Overview
+              {t("cron.scheduleOverview")}
             </h2>
           </div>
           <CronWeeklyTimeline jobs={jobs} />
@@ -359,7 +361,7 @@ export default function CronJobsPage() {
                         marginBottom: "1rem",
                       }}
                     >
-                      Delete &quot;{job.name}&quot;?
+                      {t("cron.confirmDelete", { name: job.name })}
                     </p>
                     <div
                       style={{
@@ -379,7 +381,7 @@ export default function CronJobsPage() {
                           cursor: "pointer",
                         }}
                       >
-                        Cancel
+                        {t("common.cancel")}
                       </button>
                       <button
                         onClick={() => handleDelete(job.id)}
@@ -392,7 +394,7 @@ export default function CronJobsPage() {
                           cursor: "pointer",
                         }}
                       >
-                        Delete
+                        {t("common.delete")}
                       </button>
                     </div>
                   </div>
@@ -415,10 +417,10 @@ export default function CronJobsPage() {
               fontFamily: "var(--font-heading)",
             }}
           >
-            Cron Manager
+            {t("cron.title")}
           </h1>
           <p className="text-sm md:text-base" style={{ color: "var(--text-secondary)" }}>
-            Scheduled tasks from System, OpenClaw & Heartbeat
+            {t("cron.subtitle")}
           </p>
         </div>
         <div style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
@@ -439,7 +441,7 @@ export default function CronJobsPage() {
             }}
           >
             <Plus className="w-4 h-4" />
-            <span className="hidden sm:inline">Create Job</span>
+            <span className="hidden sm:inline">{t("cron.createJob")}</span>
           </button>
 
           <button
@@ -462,7 +464,7 @@ export default function CronJobsPage() {
             }}
           >
             <RefreshCw className="w-4 h-4" />
-            Refresh
+            {t("common.refresh")}
           </button>
         </div>
       </div>
@@ -489,7 +491,7 @@ export default function CronJobsPage() {
             fontSize: "0.85rem",
           }}
         >
-          All ({systemJobs.length + jobs.length})
+          {t("cron.all")} ({systemJobs.length + jobs.length})
         </button>
         <button
           onClick={() => setActiveTab("system")}
@@ -509,7 +511,7 @@ export default function CronJobsPage() {
           }}
         >
           <Server className="w-4 h-4" />
-          System ({systemJobs.length})
+          {t("cron.systemJobs")} ({systemJobs.length})
         </button>
         <button
           onClick={() => setActiveTab("openclaw")}
@@ -529,7 +531,7 @@ export default function CronJobsPage() {
           }}
         >
           <Bot className="w-4 h-4" />
-          OpenClaw ({activeJobs})
+          {t("cron.agentJobs")} ({activeJobs})
         </button>
         <button
           onClick={() => setActiveTab("heartbeat")}
@@ -549,7 +551,7 @@ export default function CronJobsPage() {
           }}
         >
           <Heart className="w-4 h-4" />
-          Heartbeat {heartbeat?.enabled ? "✓" : ""}
+          {t("cron.heartbeat")} {heartbeat?.enabled ? "✓" : ""}
         </button>
       </div>
 
@@ -596,7 +598,7 @@ export default function CronJobsPage() {
                   color: "var(--text-secondary)",
                 }}
               >
-                System Jobs
+                {t("cron.systemJobs")}
               </p>
             </div>
           </div>
@@ -645,7 +647,7 @@ export default function CronJobsPage() {
                   color: "var(--text-secondary)",
                 }}
               >
-                Agent Jobs
+                {t("cron.agentJobs")}
               </p>
             </div>
           </div>
@@ -701,7 +703,7 @@ export default function CronJobsPage() {
                   color: "var(--text-secondary)",
                 }}
               >
-                Heartbeat
+                {t("cron.heartbeat")}
               </p>
             </div>
           </div>
@@ -746,7 +748,7 @@ export default function CronJobsPage() {
                   color: "var(--text-secondary)",
                 }}
               >
-                Paused
+                {t("cron.paused")}
               </p>
             </div>
           </div>
@@ -825,7 +827,7 @@ export default function CronJobsPage() {
               }}
             >
               <LayoutGrid className="w-3.5 h-3.5" />
-              Cards
+              {t("cron.cards")}
             </button>
             <button
               onClick={() => setViewMode("timeline")}
@@ -847,7 +849,7 @@ export default function CronJobsPage() {
               }}
             >
               <CalendarDays className="w-3.5 h-3.5" />
-              Timeline
+              {t("cron.timeline")}
             </button>
           </div>
         </div>
@@ -889,10 +891,10 @@ export default function CronJobsPage() {
               marginBottom: "0.5rem",
             }}
           >
-            No cron jobs found
+            {t("cron.noJobs")}
           </h3>
           <p style={{ color: "var(--text-secondary)", marginBottom: "1rem" }}>
-            Create your first job to get started
+            {t("cron.noJobsHint")}
           </p>
           <button
             onClick={handleCreateNew}
@@ -910,7 +912,7 @@ export default function CronJobsPage() {
             }}
           >
             <Plus className="w-4 h-4" />
-            Create Job
+            {t("cron.createJob")}
           </button>
         </div>
       ) : (
@@ -971,8 +973,8 @@ export default function CronJobsPage() {
             }}
           />
           {runToast.status === "success"
-            ? `✓ "${runToast.name}" triggered!`
-            : `✗ Failed to trigger "${runToast.name}"`}
+            ? `✓ "${runToast.name}" ${t("cron.triggered")}!`
+            : `✗ ${t("cron.failedToTrigger")} "${runToast.name}"`}
         </div>
       )}
 

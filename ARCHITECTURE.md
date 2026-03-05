@@ -165,8 +165,10 @@ superbotijo/
 │   │       ├── en.json           # English translations
 │   │       └── es.json           # Spanish translations
 │   │
-│   ├── lib/                      # Utility modules (20)
+│   ├── lib/                      # Utility modules (22)
 │   │   ├── pricing.ts            # Cost calculations
+│   │   ├── kanban-db.ts          # Kanban board storage (SQLite)
+│   │   ├── openclaw-agents.ts    # OpenClaw agent detection
 │   │   ├── activity-logger.ts    # Activity logging (legacy)
 │   │   ├── activities-db.ts      # SQLite activity storage
 │   │   ├── usage-collector.ts    # Usage data collection
@@ -189,7 +191,7 @@ superbotijo/
 │   │
 │   └── middleware.ts             # Auth guard for all routes
 │
-├── data/                         # JSON data files (gitignored)
+├── data/                         # Data files (gitignored)
 │   ├── activities.json           # Activity log (legacy)
 │   ├── cron-jobs.json            # Cron job definitions
 │   ├── notifications.json        # Notification store
@@ -197,7 +199,10 @@ superbotijo/
 │   ├── tasks.json                # Task definitions
 │   ├── workflows.json            # Workflow definitions
 │   ├── experiments.json          # Playground experiments
-│   └── generated-reports.json    # Generated reports
+│   ├── generated-reports.json    # Generated reports
+│   ├── kanban.db                 # SQLite Kanban board (tasks, columns, projects)
+│   ├── activities.db             # SQLite activities
+│   └── usage-tracking.db         # SQLite usage tracking
 │
 ├── scripts/                      # Setup and collection scripts
 │   ├── collect-usage.ts          # Usage data collection
@@ -467,6 +472,19 @@ graph TB
 | GET | `/api/cron/system` | Get system cron jobs |
 | POST | `/api/cron/system-run` | Run system job |
 | GET | `/api/cron/system-logs` | Get system job logs |
+
+#### Tasks (`/api/tasks`)
+
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| GET | `/api/tasks` | Unified tasks API (cron + heartbeat + scheduled) |
+
+#### OpenClaw Agents (`/api/openclaw/agents`)
+
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| GET | `/api/openclaw/agents` | List agents from openclaw.json |
+| POST | `/api/openclaw/agents` | Sync agents to Kanban projects |
 
 #### Skills (`/api/skills/*`)
 
@@ -767,6 +785,8 @@ graph TB
 | Module | Purpose | Key Exports |
 |--------|---------|-------------|
 | `pricing.ts` | AI model cost calculations | `calculateCost()`, `MODEL_PRICING` |
+| `kanban-db.ts` | Kanban board storage | `createTask()`, `getTask()`, `listTasks()`, `moveTask()`, `createProject()`, `getColumns()` |
+| `openclaw-agents.ts` | OpenClaw agent detection | `getOpenClawAgents()`, `syncAgentsToProjects()` |
 | `activities-db.ts` | SQLite activity storage | `logActivity()`, `getActivities()`, `getActivityStats()` |
 | `usage-collector.ts` | OpenClaw session collection | `collectUsage()`, `SessionData` |
 | `usage-queries.ts` | Usage analytics queries | `getCostSummary()`, `getCostByAgent()` |
@@ -945,6 +965,68 @@ CREATE INDEX idx_usage_timestamp ON usage_snapshots(timestamp);
 CREATE INDEX idx_usage_date ON usage_snapshots(date);
 CREATE INDEX idx_usage_agent ON usage_snapshots(agent_id);
 CREATE INDEX idx_usage_model ON usage_snapshots(model);
+```
+
+### kanban.db
+
+```sql
+CREATE TABLE kanban_tasks (
+    id TEXT PRIMARY KEY,
+    title TEXT NOT NULL,
+    description TEXT,
+    status TEXT NOT NULL DEFAULT 'backlog',
+    priority TEXT NOT NULL DEFAULT 'medium',
+    assignee TEXT,
+    labels TEXT,
+    "order" REAL NOT NULL DEFAULT 0,
+    project_id TEXT,
+    due_date TEXT,
+    depends_on TEXT,
+    execution_status TEXT,
+    execution_result TEXT,
+    blocked_by TEXT,
+    waiting_for TEXT,
+    created_at TEXT NOT NULL,
+    updated_at TEXT NOT NULL
+);
+
+CREATE TABLE kanban_columns (
+    id TEXT PRIMARY KEY,
+    name TEXT NOT NULL,
+    color TEXT NOT NULL DEFAULT '#6b7280',
+    "order" REAL NOT NULL DEFAULT 0,
+    "limit" INTEGER
+);
+
+CREATE TABLE projects (
+    id TEXT PRIMARY KEY,
+    name TEXT NOT NULL,
+    description TEXT,
+    mission_alignment TEXT,
+    status TEXT NOT NULL DEFAULT 'active',
+    milestones TEXT,
+    created_at TEXT NOT NULL,
+    updated_at TEXT NOT NULL
+);
+
+CREATE TABLE agent_identities (
+    id TEXT PRIMARY KEY,
+    name TEXT NOT NULL,
+    role TEXT NOT NULL,
+    personality TEXT,
+    avatar TEXT,
+    mission TEXT,
+    created_at TEXT NOT NULL,
+    updated_at TEXT NOT NULL
+);
+
+CREATE TABLE operations_journal (
+    id TEXT PRIMARY KEY,
+    date TEXT NOT NULL,
+    narrative TEXT NOT NULL,
+    highlights TEXT,
+    created_at TEXT NOT NULL
+);
 ```
 
 ---

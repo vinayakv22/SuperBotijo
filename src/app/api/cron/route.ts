@@ -54,17 +54,62 @@ interface UpdateJobBody {
 
 export async function GET() {
   try {
-    execSync("openclaw cron list --json --all 2>/dev/null", {
+    const output = execSync("openclaw cron list --json --all 2>/dev/null", {
       timeout: 10000,
       encoding: "utf-8",
     });
 
-    const config = getGatewayConfig();
-    return NextResponse.json({ config });
+    let rawJobs = [];
+    try {
+      const parsed = JSON.parse(output);
+      // OpenClaw returns { jobs: [...] }
+      rawJobs = parsed.jobs || parsed || [];
+    } catch {
+      console.error("[cron API] Failed to parse cron list output:", output);
+      return NextResponse.json([]);
+    }
+
+    // Transform to match CronJob interface expected by UI
+    const cronJobs = rawJobs.map((job: Record<string, unknown>) => {
+      const schedule = job.schedule as Record<string, unknown> | undefined;
+      let scheduleDisplay = "Custom";
+      let scheduleString = "* * * * *";
+
+      if (schedule?.kind === "every") {
+        const everyMs = schedule.everyMs as number;
+        if (everyMs === 1800000) scheduleDisplay = "Every 30 min";
+        else if (everyMs === 3600000) scheduleDisplay = "Every hour";
+        else if (everyMs === 86400000) scheduleDisplay = "Daily";
+        else scheduleDisplay = `Every ${everyMs / 60000} min`;
+        scheduleString = `*/${everyMs / 60000} * * * *`;
+      } else if (schedule?.kind === "cron") {
+        scheduleString = (schedule.expr as string) || "* * * * *";
+        scheduleDisplay = scheduleString;
+      }
+
+      const state = job.state as Record<string, unknown> | undefined;
+
+      return {
+        id: job.id,
+        agentId: job.agentId || "unknown",
+        name: job.name,
+        description: (job.description as string) || "",
+        schedule: scheduleString,
+        scheduleDisplay,
+        timezone: (schedule?.tz as string) || "UTC",
+        enabled: job.enabled !== false,
+        nextRun: state?.nextRunAtMs ? new Date(state.nextRunAtMs as number).toISOString() : null,
+        lastRun: state?.lastRunAtMs ? new Date(state.lastRunAtMs as number).toISOString() : null,
+        sessionTarget: job.sessionTarget || "isolated",
+        payload: job.payload || {},
+      };
+    });
+
+    return NextResponse.json(cronJobs);
   } catch (error) {
-    console.error("Error fetching cron jobs from gateway:", error);
+    console.error("Error fetching cron jobs:", error);
     return NextResponse.json(
-      { error: "Failed to fetch cron jobs from OpenClaw gateway" },
+      { error: "Failed to fetch cron jobs from OpenClaw" },
       { status: 500 }
     );
   }
