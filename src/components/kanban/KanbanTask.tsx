@@ -1,6 +1,6 @@
 "use client";
 
-import { GripVertical, AlertCircle, Lock, Clock } from "lucide-react";
+import { GripVertical, AlertCircle, Lock, Clock, Play, CheckCircle, XCircle, PauseCircle } from "lucide-react";
 import { motion } from "framer-motion";
 import type { KanbanTask as KanbanTaskType, KanbanLabel } from "@/lib/kanban-db";
 
@@ -134,6 +134,11 @@ export function KanbanTask({ task, onClick, onDragStart, onDragEnd, isDragging }
              </div>
            )}
 
+           {/* Execution Status indicator */}
+           {task.executionStatus && (
+             <ExecutionStatusBadge status={task.executionStatus} result={task.executionResult} />
+           )}
+
            {/* Footer: Priority + Assignee */}
            <div className="mt-3 flex items-center justify-between">
              <span
@@ -178,5 +183,33 @@ function LabelBadge({ label }: { label: KanbanLabel }) {
     >
       {label.name}
     </span>
+  );
+}
+
+function ExecutionStatusBadge({ status, result }: { status: string; result: string | null }) {
+  const config = {
+    running: { icon: <Play className="h-3 w-3" />, label: "Running", color: "var(--info)", bg: "rgba(10, 132, 255, 0.15)" },
+    success: { icon: <CheckCircle className="h-3 w-3" />, label: "Success", color: "var(--success)", bg: "rgba(46, 160, 67, 0.15)" },
+    error: { icon: <XCircle className="h-3 w-3" />, label: "Error", color: "var(--error)", bg: "rgba(255, 69, 58, 0.15)" },
+    skipped: { icon: <PauseCircle className="h-3 w-3" />, label: "Skipped", color: "var(--text-muted)", bg: "rgba(82, 82, 82, 0.15)" },
+    pending: { icon: <Clock className="h-3 w-3" />, label: "Pending", color: "var(--warning)", bg: "rgba(255, 214, 10, 0.15)" },
+  };
+
+  const c = config[status as keyof typeof config] || config.pending;
+
+  return (
+    <div
+      className="mb-2 flex items-center gap-1.5 rounded px-2 py-1 text-xs cursor-help"
+      style={{ backgroundColor: c.bg, color: c.color, border: `1px solid ${c.color}40` }}
+      title={result || undefined}
+    >
+      {c.icon}
+      <span>{c.label}</span>
+      {result && (
+        <span className="ml-1 truncate max-w-[100px]" style={{ opacity: 0.7 }}>
+          - {result.length > 20 ? result.slice(0, 20) + "..." : result}
+        </span>
+      )}
+    </div>
   );
 }

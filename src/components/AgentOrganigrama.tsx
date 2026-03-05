@@ -1,6 +1,9 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useRef, useEffect } from "react";
+import { DEPARTMENTS, type DepartmentId, groupAgentsByDepartment } from "@/lib/agent-auto-config";
+
+type AgentStatus = "working" | "idle" | "error" | "paused" | "online" | "offline";
 
 interface Agent {
   id: string;
@@ -10,7 +13,7 @@ interface Agent {
   model: string;
   allowAgents: string[];
   allowAgentsDetails?: Array<{ id: string; name: string; emoji: string; color: string }>;
-  status: "online" | "offline";
+  status: AgentStatus;
   activeSessions: number;
 }
 
@@ -18,23 +21,131 @@ interface AgentOrganigramaProps {
   agents: Agent[];
 }
 
-interface NodePos {
-  id: string;
-  x: number;
-  y: number;
-  width: number;
-  height: number;
-  agent: Agent;
-}
+// Department display order (sorted by importance)
+const DEPARTMENT_ORDER: DepartmentId[] = [
+  "DEVELOPMENT",
+  "DATA_EXTRACTION",
+  "MEMORY_NOTES",
+  "COMMUNICATION",
+  "ENTERTAINMENT",
+  "GENERAL",
+  "OTHER",
+];
 
-const NODE_W = 160;
-const NODE_H = 72;
-const H_GAP = 40;
-const V_GAP = 80;
+interface Connection {
+  id: string;
+  x1: number;
+  y1: number;
+  x2: number;
+  y2: number;
+  color: string;
+}
 
 export function AgentOrganigrama({ agents }: AgentOrganigramaProps) {
   const [hoveredId, setHoveredId] = useState<string | null>(null);
+  const [connections, setConnections] = useState<Connection[]>([]);
+  const containerRef = useRef<HTMLDivElement>(null);
+  const hqRef = useRef<HTMLDivElement>(null);
+  const deptRefs = useRef<Record<string, HTMLDivElement | null>>({});
 
+  // Find the root agent (the one with subagents - HQ)
+  const rootAgent = agents.find((a) => a.allowAgents && a.allowAgents.length > 0);
+  const rootAgentId = rootAgent?.id || null;
+
+  // Get subagent IDs of the root agent
+  const subagentIds = new Set(rootAgent?.allowAgents || []);
+
+  // Separate root agent from other agents
+  const otherAgents = rootAgentId
+    ? agents.filter((a) => a.id !== rootAgentId)
+    : agents;
+
+  // Group other agents by department
+  const grouped = groupAgentsByDepartment(otherAgents);
+
+  // Get departments that have agents
+  const departmentsWithAgents = DEPARTMENT_ORDER.filter(
+    (deptId) => grouped[deptId]?.length
+  );
+
+  // Calculate connections after render
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      if (!containerRef.current || !hqRef.current) return;
+
+      const containerRect = containerRef.current.getBoundingClientRect();
+      const hqRect = hqRef.current.getBoundingClientRect();
+
+      const newConnections: Connection[] = [];
+
+      // HQ center bottom point
+      const hqX = hqRect.left + hqRect.width / 2 - containerRect.left;
+      const hqY = hqRect.bottom - containerRect.top;
+
+      // Connect HQ to each department section
+      for (const deptId of departmentsWithAgents) {
+        const deptEl = deptRefs.current[deptId];
+        if (!deptEl) continue;
+
+        const deptRect = deptEl.getBoundingClientRect();
+        const deptX = deptRect.left + deptRect.width / 2 - containerRect.left;
+        const deptY = deptRect.top - containerRect.top;
+
+        newConnections.push({
+          id: `hq-${deptId}`,
+          x1: hqX,
+          y1: hqY,
+          x2: deptX,
+          y2: deptY,
+          color: rootAgent?.color || "#6366f1",
+        });
+      }
+
+      setConnections(newConnections);
+    }, 200);
+
+    return () => clearTimeout(timer);
+  }, [agents, rootAgent, departmentsWithAgents]);
+
+  // Recalculate on resize
+  useEffect(() => {
+    const handleResize = () => {
+      if (!containerRef.current || !hqRef.current) return;
+
+      const containerRect = containerRef.current.getBoundingClientRect();
+      const hqRect = hqRef.current.getBoundingClientRect();
+
+      const newConnections: Connection[] = [];
+
+      const hqX = hqRect.left + hqRect.width / 2 - containerRect.left;
+      const hqY = hqRect.bottom - containerRect.top;
+
+      for (const deptId of departmentsWithAgents) {
+        const deptEl = deptRefs.current[deptId];
+        if (!deptEl) continue;
+
+        const deptRect = deptEl.getBoundingClientRect();
+        const deptX = deptRect.left + deptRect.width / 2 - containerRect.left;
+        const deptY = deptRect.top - containerRect.top;
+
+        newConnections.push({
+          id: `hq-${deptId}`,
+          x1: hqX,
+          y1: hqY,
+          x2: deptX,
+          y2: deptY,
+          color: rootAgent?.color || "#6366f1",
+        });
+      }
+
+      setConnections(newConnections);
+    };
+
+    window.addEventListener("resize", handleResize);
+    return () => window.removeEventListener("resize", handleResize);
+  }, [departmentsWithAgents, rootAgent]);
+
+  // No agents case
   if (agents.length === 0) {
     return (
       <div style={{ textAlign: "center", padding: "3rem", color: "var(--text-muted)" }}>
@@ -43,250 +154,363 @@ export function AgentOrganigrama({ agents }: AgentOrganigramaProps) {
     );
   }
 
-  // Build parent-child relationships from allowAgents
-  const agentMap = new Map(agents.map((a) => [a.id, a]));
+  // No root agent case - show simple grid
+  if (!rootAgent) {
+    return (
+      <div style={{ padding: "1rem" }}>
+        <div
+          style={{
+            display: "grid",
+            gridTemplateColumns: "repeat(auto-fit, minmax(280px, 1fr))",
+            gap: "1.5rem",
+          }}
+        >
+          {DEPARTMENT_ORDER.map((deptId) => {
+            const deptAgents = grouped[deptId];
+            if (!deptAgents || deptAgents.length === 0) return null;
 
-  // Determine root agents (not listed as sub of anyone)
-  const childIds = new Set(agents.flatMap((a) => a.allowAgents));
-  const roots = agents.filter((a) => !childIds.has(a.id));
-
-  // Build tree: find children of each agent
-  function getChildren(agentId: string): Agent[] {
-    const agent = agentMap.get(agentId);
-    if (!agent) return [];
-    return (agent.allowAgents || []).map((id) => agentMap.get(id)).filter(Boolean) as Agent[];
-  }
-
-  // Layout algorithm: compute positions
-  const positions: NodePos[] = [];
-
-  function layoutAgent(agent: Agent, level: number, col: number): number {
-    const children = getChildren(agent.id);
-    let myCol = col;
-
-    if (children.length > 0) {
-      let childCol = col;
-      for (const child of children) {
-        childCol = layoutAgent(child, level + 1, childCol);
-      }
-      // Center over children
-      const firstChild = positions.find((p) => p.id === children[0].id);
-      const lastChild = positions.find((p) => p.id === children[children.length - 1].id);
-      if (firstChild && lastChild) {
-        myCol = Math.floor((firstChild.x + lastChild.x + NODE_W) / 2 - NODE_W / 2);
-      } else {
-        myCol = col;
-      }
-      return childCol;
-    } else {
-      myCol = col;
-      positions.push({
-        id: agent.id,
-        x: myCol,
-        y: level * (NODE_H + V_GAP),
-        width: NODE_W,
-        height: NODE_H,
-        agent,
-      });
-      return col + NODE_W + H_GAP;
-    }
-  }
-
-  // Two-pass: first layout leaves, then parents
-  // Simpler: DFS with position accumulator
-  const leafXCounter = { val: 0 };
-
-  function layoutDFS(agent: Agent, level: number): void {
-    const children = getChildren(agent.id);
-
-    if (children.length === 0) {
-      positions.push({
-        id: agent.id,
-        x: leafXCounter.val,
-        y: level * (NODE_H + V_GAP),
-        width: NODE_W,
-        height: NODE_H,
-        agent,
-      });
-      leafXCounter.val += NODE_W + H_GAP;
-    } else {
-      for (const child of children) {
-        layoutDFS(child, level + 1);
-      }
-      // Center parent over its children
-      const childPositions = children.map((c) => positions.find((p) => p.id === c.id)).filter(Boolean) as NodePos[];
-      const leftX = Math.min(...childPositions.map((p) => p.x));
-      const rightX = Math.max(...childPositions.map((p) => p.x + p.width));
-      const centerX = leftX + (rightX - leftX) / 2 - NODE_W / 2;
-      positions.push({
-        id: agent.id,
-        x: centerX,
-        y: level * (NODE_H + V_GAP),
-        width: NODE_W,
-        height: NODE_H,
-        agent,
-      });
-    }
-  }
-
-  for (const root of roots) {
-    layoutDFS(root, 0);
-  }
-
-  // SVG dimensions
-  const minX = Math.min(...positions.map((p) => p.x));
-  const maxX = Math.max(...positions.map((p) => p.x + p.width));
-  const maxY = Math.max(...positions.map((p) => p.y + p.height));
-  const padding = 40;
-  const svgW = maxX - minX + padding * 2;
-  const svgH = maxY + padding * 2;
-
-  // Offset all positions by padding - minX
-  const offsetX = padding - minX;
-  const offsetY = padding;
-
-  // Build edges (parent → children)
-  const edges: Array<{ from: NodePos; to: NodePos }> = [];
-  for (const pos of positions) {
-    const children = getChildren(pos.id);
-    for (const child of children) {
-      const childPos = positions.find((p) => p.id === child.id);
-      if (childPos) {
-        edges.push({ from: pos, to: childPos });
-      }
-    }
+            return (
+              <DepartmentCard
+                key={deptId}
+                deptId={deptId}
+                agents={deptAgents}
+                hoveredId={hoveredId}
+                setHoveredId={setHoveredId}
+              />
+            );
+          })}
+        </div>
+      </div>
+    );
   }
 
   return (
-    <div style={{ overflowX: "auto", overflowY: "auto", padding: "1rem" }}>
+    <div ref={containerRef} style={{ padding: "1rem", position: "relative" }}>
+      {/* SVG Layer */}
       <svg
-        width={svgW}
-        height={svgH}
-        viewBox={`0 0 ${svgW} ${svgH}`}
-        style={{ fontFamily: "var(--font-heading, sans-serif)", display: "block", margin: "0 auto", maxWidth: "100%" }}
+        style={{
+          position: "absolute",
+          top: 0,
+          left: 0,
+          width: "100%",
+          height: "100%",
+          pointerEvents: "none",
+          zIndex: 0,
+          minHeight: "800px",
+        }}
       >
-        {/* Edges */}
-        {edges.map(({ from, to }, i) => {
-          const x1 = from.x + offsetX + from.width / 2;
-          const y1 = from.y + offsetY + from.height;
-          const x2 = to.x + offsetX + to.width / 2;
-          const y2 = to.y + offsetY;
-          const midY = (y1 + y2) / 2;
+        {connections.map((conn) => (
+          <g key={conn.id}>
+            {/* Bezier curve */}
+            <path
+              d={`M ${conn.x1} ${conn.y1} 
+                  C ${conn.x1} ${conn.y1 + 40}, 
+                    ${conn.x2} ${conn.y2 - 40}, 
+                    ${conn.x2} ${conn.y2}`}
+              stroke={conn.color}
+              strokeWidth="2"
+              fill="none"
+              strokeDasharray="6,4"
+              opacity="0.5"
+            />
+            {/* Circle at start */}
+            <circle cx={conn.x1} cy={conn.y1} r="4" fill={conn.color} opacity="0.6" />
+            {/* Circle at end */}
+            <circle cx={conn.x2} cy={conn.y2} r="4" fill={conn.color} opacity="0.6" />
+          </g>
+        ))}
+      </svg>
 
-          const isHovered = hoveredId === from.id || hoveredId === to.id;
+      {/* HQ Section - Root Agent */}
+      <div
+        ref={hqRef}
+        style={{
+          marginBottom: "80px",
+          position: "relative",
+          zIndex: 1,
+          maxWidth: "500px",
+          marginLeft: "auto",
+          marginRight: "auto",
+        }}
+      >
+        <div
+          style={{
+            backgroundColor: `${rootAgent.color}08`,
+            borderRadius: "16px",
+            border: `2px solid ${rootAgent.color}`,
+            overflow: "hidden",
+            boxShadow: `0 4px 20px ${rootAgent.color}20`,
+          }}
+        >
+          {/* HQ Header */}
+          <div
+            style={{
+              display: "flex",
+              alignItems: "center",
+              gap: "0.75rem",
+              padding: "0.75rem 1rem",
+              backgroundColor: `${rootAgent.color}15`,
+              borderBottom: `1px solid ${rootAgent.color}20`,
+            }}
+          >
+            <span style={{ fontSize: "1.5rem" }}>{rootAgent.emoji}</span>
+            <div style={{ flex: 1 }}>
+              <h3
+                style={{
+                  margin: 0,
+                  fontSize: "1.1rem",
+                  fontWeight: 600,
+                  color: rootAgent.color,
+                }}
+              >
+                {rootAgent.name}
+                <span style={{ fontSize: "0.8rem", opacity: 0.7 }}> (HQ)</span>
+              </h3>
+              <span style={{ fontSize: "0.7rem", color: "var(--text-muted)" }}>
+                {rootAgent.allowAgents?.length || 0} subagent{(rootAgent.allowAgents?.length || 0) !== 1 ? "s" : ""}
+              </span>
+            </div>
+          </div>
+
+          {/* Model */}
+          <div
+            style={{
+              padding: "0.5rem 1rem",
+              fontSize: "0.7rem",
+              color: "var(--text-muted)",
+              backgroundColor: "var(--card)",
+            }}
+          >
+            {rootAgent.model.split("/").pop() || rootAgent.model}
+          </div>
+        </div>
+      </div>
+
+      {/* Other Departments Grid */}
+      <div
+        style={{
+          display: "grid",
+          gridTemplateColumns: "repeat(auto-fit, minmax(280px, 1fr))",
+          gap: "1.5rem",
+          position: "relative",
+          zIndex: 1,
+        }}
+      >
+        {departmentsWithAgents.map((deptId) => {
+          const deptAgents = grouped[deptId];
+          if (!deptAgents || deptAgents.length === 0) return null;
 
           return (
-            <path
-              key={i}
-              d={`M ${x1} ${y1} C ${x1} ${midY}, ${x2} ${midY}, ${x2} ${y2}`}
-              fill="none"
-              stroke={isHovered ? "var(--accent)" : "var(--border)"}
-              strokeWidth={isHovered ? 2 : 1.5}
-              opacity={isHovered ? 1 : 0.5}
-              strokeDasharray={isHovered ? "none" : "4,4"}
-              style={{ transition: "all 0.2s" }}
-            />
+            <div
+              key={deptId}
+              ref={(el) => {
+                deptRefs.current[deptId] = el;
+              }}
+            >
+              <DepartmentCard
+                deptId={deptId}
+                agents={deptAgents}
+                hoveredId={hoveredId}
+                setHoveredId={setHoveredId}
+              />
+            </div>
           );
         })}
+      </div>
 
-        {/* Nodes */}
-        {positions.map((pos) => {
-          const x = pos.x + offsetX;
-          const y = pos.y + offsetY;
-          const agent = pos.agent;
+      {/* Legend */}
+      <div
+        style={{
+          display: "flex",
+          gap: "1.5rem",
+          justifyContent: "center",
+          marginTop: "2rem",
+          paddingTop: "1rem",
+          borderTop: "1px solid var(--border)",
+          fontSize: "0.75rem",
+          color: "var(--text-muted)",
+          position: "relative",
+          zIndex: 1,
+        }}
+      >
+        <span style={{ display: "flex", alignItems: "center", gap: "0.25rem" }}>
+          <span style={{ width: "8px", height: "8px", borderRadius: "50%", backgroundColor: "#4ade80" }} />
+          Online
+        </span>
+        <span style={{ display: "flex", alignItems: "center", gap: "0.25rem" }}>
+          <span style={{ width: "8px", height: "8px", borderRadius: "50%", backgroundColor: "#6b7280" }} />
+          Offline
+        </span>
+        <span style={{ display: "flex", alignItems: "center", gap: "0.25rem" }}>
+          <span style={{ width: "20px", height: "2px", backgroundColor: rootAgent?.color || "#6366f1", opacity: 0.5 }} />
+          Connection
+        </span>
+      </div>
+    </div>
+  );
+}
+
+// Department Card Component
+interface DepartmentCardProps {
+  deptId: DepartmentId;
+  agents: Agent[];
+  hoveredId: string | null;
+  setHoveredId: (id: string | null) => void;
+}
+
+function DepartmentCard({ deptId, agents, hoveredId, setHoveredId }: DepartmentCardProps) {
+  const dept = DEPARTMENTS[deptId];
+
+  return (
+    <div
+      style={{
+        backgroundColor: `${dept.color}08`,
+        borderRadius: "16px",
+        border: `2px solid ${dept.color}30`,
+        overflow: "hidden",
+      }}
+    >
+      {/* Header */}
+      <div
+        style={{
+          display: "flex",
+          alignItems: "center",
+          gap: "0.75rem",
+          padding: "0.75rem 1rem",
+          backgroundColor: `${dept.color}15`,
+          borderBottom: `1px solid ${dept.color}20`,
+        }}
+      >
+        <span style={{ fontSize: "1.5rem" }}>{dept.emoji}</span>
+        <div style={{ flex: 1 }}>
+          <h3
+            style={{
+              margin: 0,
+              fontSize: "0.95rem",
+              fontWeight: 600,
+              color: "var(--text-primary)",
+            }}
+          >
+            {dept.name}
+          </h3>
+          <span style={{ fontSize: "0.7rem", color: "var(--text-muted)" }}>
+            {agents.length} agent{agents.length !== 1 ? "s" : ""}
+          </span>
+        </div>
+      </div>
+
+      {/* Agents List */}
+      <div style={{ padding: "0.75rem", display: "flex", flexDirection: "column", gap: "0.5rem" }}>
+        {agents.map((agent) => {
           const isHovered = hoveredId === agent.id;
           const isOnline = agent.status === "online";
 
           return (
-            <g
-              key={pos.id}
+            <div
+              key={agent.id}
               onMouseEnter={() => setHoveredId(agent.id)}
               onMouseLeave={() => setHoveredId(null)}
-              style={{ cursor: "pointer" }}
+              style={{
+                padding: "0.6rem 0.75rem",
+                borderRadius: "10px",
+                backgroundColor: isHovered ? `${agent.color}12` : "var(--card)",
+                border: `1px solid ${isHovered ? agent.color : "var(--border)"}`,
+                transition: "all 0.2s",
+                cursor: "pointer",
+              }}
             >
-              {/* Card background */}
-              <rect
-                x={x}
-                y={y}
-                width={pos.width}
-                height={pos.height}
-                rx={10}
-                ry={10}
-                fill={isHovered ? `${agent.color}22` : "var(--card)"}
-                stroke={isHovered ? agent.color : "var(--border)"}
-                strokeWidth={isHovered ? 2 : 1}
-                style={{ transition: "all 0.2s", filter: isHovered ? "drop-shadow(0 4px 12px rgba(0,0,0,0.5))" : "none" }}
-              />
+              <div style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
+                <span style={{ fontSize: "1.2rem" }}>{agent.emoji}</span>
+                <span
+                  style={{
+                    fontWeight: 600,
+                    color: "var(--text-primary)",
+                    fontSize: "0.85rem",
+                  }}
+                >
+                  {agent.name}
+                </span>
 
-              {/* Left color bar */}
-              <rect
-                x={x}
-                y={y + 6}
-                width={3}
-                height={pos.height - 12}
-                rx={2}
-                fill={agent.color}
-              />
+                {/* Status */}
+                <div
+                  style={{
+                    marginLeft: "auto",
+                    width: "8px",
+                    height: "8px",
+                    borderRadius: "50%",
+                    backgroundColor: isOnline ? "#4ade80" : "#6b7280",
+                  }}
+                />
 
-              {/* Emoji */}
-              <text
-                x={x + 22}
-                y={y + pos.height / 2 + 6}
-                fontSize={20}
-                textAnchor="middle"
-              >
-                {agent.emoji}
-              </text>
-
-              {/* Name */}
-              <text
-                x={x + 42}
-                y={y + pos.height / 2 - 6}
-                fill="var(--text-primary)"
-                fontSize={12}
-                fontWeight={600}
-                fontFamily="var(--font-heading, sans-serif)"
-              >
-                {agent.name.length > 14 ? agent.name.slice(0, 13) + "…" : agent.name}
-              </text>
+                {/* Active sessions */}
+                {agent.activeSessions > 0 && (
+                  <div
+                    style={{
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      minWidth: "18px",
+                      height: "18px",
+                      borderRadius: "9px",
+                      backgroundColor: "rgba(255,59,48,0.15)",
+                      border: "1px solid var(--accent)",
+                      fontSize: "0.6rem",
+                      fontWeight: 700,
+                      color: "var(--accent)",
+                      padding: "0 5px",
+                    }}
+                  >
+                    {agent.activeSessions}
+                  </div>
+                )}
+              </div>
 
               {/* Model */}
-              <text
-                x={x + 42}
-                y={y + pos.height / 2 + 8}
-                fill="var(--text-muted)"
-                fontSize={9}
+              <div
+                style={{
+                  fontSize: "0.65rem",
+                  color: "var(--text-muted)",
+                  marginTop: "0.15rem",
+                  marginLeft: "1.7rem",
+                }}
               >
-                {agent.model.split("/").pop()?.slice(0, 18) || ""}
-              </text>
+                {agent.model.split("/").pop() || agent.model}
+              </div>
 
-              {/* Status dot */}
-              <circle
-                cx={x + pos.width - 10}
-                cy={y + 10}
-                r={4}
-                fill={isOnline ? "#4ade80" : "#6b7280"}
-              />
-
-              {/* Sessions badge (if active) */}
-              {agent.activeSessions > 0 && (
-                <g>
-                  <circle cx={x + pos.width - 10} cy={y + pos.height - 10} r={8} fill="rgba(255,59,48,0.15)" stroke="var(--accent)" strokeWidth={1} />
-                  <text x={x + pos.width - 10} y={y + pos.height - 7} fontSize={8} fill="var(--accent)" textAnchor="middle" fontWeight={700}>
-                    {agent.activeSessions}
-                  </text>
-                </g>
+              {/* Subagents */}
+              {agent.allowAgentsDetails && agent.allowAgentsDetails.length > 0 && (
+                <div
+                  style={{
+                    display: "flex",
+                    flexWrap: "wrap",
+                    gap: "0.25rem",
+                    marginTop: "0.4rem",
+                    marginLeft: "1.7rem",
+                  }}
+                >
+                  {agent.allowAgentsDetails.map((sub) => (
+                    <div
+                      key={sub.id}
+                      style={{
+                        display: "flex",
+                        alignItems: "center",
+                        gap: "0.2rem",
+                        padding: "0.15rem 0.4rem",
+                        borderRadius: "4px",
+                        backgroundColor: `${sub.color}15`,
+                        border: `1px solid ${sub.color}30`,
+                        fontSize: "0.6rem",
+                      }}
+                    >
+                      <span>{sub.emoji}</span>
+                      <span style={{ color: sub.color, fontWeight: 500 }}>{sub.name}</span>
+                    </div>
+                  ))}
+                </div>
               )}
-            </g>
+            </div>
           );
         })}
-      </svg>
-
-      {/* Legend */}
-      <div style={{ display: "flex", gap: "1.5rem", justifyContent: "center", marginTop: "1rem", fontSize: "0.75rem", color: "var(--text-muted)" }}>
-        <span>● Online</span>
-        <span style={{ color: "#6b7280" }}>● Offline</span>
-        <span>--- allows communication</span>
       </div>
     </div>
   );

@@ -84,6 +84,40 @@
     "openOffice": "Abrir Oficina",
     "smartSuggestions": "💡 Sugerencias inteligentes"
   },
+  "agents": {
+    "title": "Agentes",
+    "loading": "Cargando agentes...",
+    "overview": "Vista general del sistema multi-agente • {count} agentes configurados",
+    "cards": "Tarjetas de Agentes",
+    "organigrama": "Organigrama",
+    "hierarchy": "Jerarquía de Agentes",
+    "hierarchySubtitle": "Visualización de permisos de spawn de agentes",
+    "never": "Nunca",
+    "justNow": "Recién",
+    "minutesAgo": "hace {count}m",
+    "hoursAgo": "hace {count}h",
+    "daysAgo": "hace {count}d",
+    "telegramConnected": "Bot de Telegram Conectado",
+    "model": "Modelo",
+    "workspace": "Workspace",
+    "dmPolicy": "Política DM",
+    "canSpawn": "Puede spawnear subagentes ({count})",
+    "lastActivity": "Última actividad",
+    "active": "activo",
+    "tokens": "Tokens",
+    "sessions": "Sesiones",
+    "energy": "Energía",
+    "currentTask": "Tarea actual",
+    "streak": "Racha",
+    "status": {
+      "working": "Trabajando",
+      "online": "En línea",
+      "idle": "Inactivo",
+      "paused": "Pausado",
+      "error": "Error",
+      "offline": "Desconectado"
+    }
+  },
   "cron": {
     "title": "Gestor de Tareas",
     "subtitle": "Tareas programadas del Sistema, OpenClaw y Heartbeat",
@@ -121,7 +155,7 @@
     },
     "agents": {
       "title": "Agentes",
-      "description": "Ver y gestionar tus agentes de IA. Ver jerarquía, patrones de comunicación y crear subagentes."
+      "description": "Ver y gestionar tus agentes de IA. Ver jerarquía y crear subagentes."
     },
     "office": {
       "title": "Oficina 3D",

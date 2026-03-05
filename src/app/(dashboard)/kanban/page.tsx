@@ -1,8 +1,8 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useMemo } from "react";
 import Link from "next/link";
-import { RefreshCw, AlertCircle, AlertTriangle, Target, Briefcase, BookOpen, Rocket } from "lucide-react";
+import { RefreshCw, AlertCircle, AlertTriangle, Play, CheckCircle, XCircle, Clock, Calendar } from "lucide-react";
 import { KanbanBoard, TaskModal, ProjectProgressCard, OrphanTasksModal } from "@/components/kanban";
 import type { KanbanTask, KanbanColumn } from "@/lib/kanban-db";
 import type { Project } from "@/lib/mission-types";
@@ -12,11 +12,14 @@ interface ProjectWithStats extends Project {
   progress: number;
 }
 
+type ExecutionFilter = "all" | "running" | "success" | "error" | "pending" | "none";
+
 export default function KanbanPage() {
   const [columns, setColumns] = useState<KanbanColumn[]>([]);
   const [tasks, setTasks] = useState<KanbanTask[]>([]);
   const [projects, setProjects] = useState<ProjectWithStats[]>([]);
   const [selectedProjectId, setSelectedProjectId] = useState<string | null>(null);
+  const [executionFilter, setExecutionFilter] = useState<ExecutionFilter>("all");
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -59,6 +62,25 @@ export default function KanbanPage() {
   useEffect(() => {
     fetchData();
   }, [fetchData]);
+
+  // Filter tasks by execution status
+  const filteredTasks = useMemo(() => {
+    if (executionFilter === "all") return tasks;
+    if (executionFilter === "none") return tasks.filter((t) => !t.executionStatus);
+    return tasks.filter((t) => t.executionStatus === executionFilter);
+  }, [tasks, executionFilter]);
+
+  // Count tasks by execution status
+  const taskCounts = useMemo(() => {
+    return {
+      all: tasks.length,
+      running: tasks.filter((t) => t.executionStatus === "running").length,
+      success: tasks.filter((t) => t.executionStatus === "success").length,
+      error: tasks.filter((t) => t.executionStatus === "error").length,
+      pending: tasks.filter((t) => t.executionStatus === "pending").length,
+      none: tasks.filter((t) => !t.executionStatus).length,
+    };
+  }, [tasks]);
 
   const handleTaskClick = useCallback((task: KanbanTask) => {
     setEditingTask(task);
@@ -256,9 +278,78 @@ export default function KanbanPage() {
         </div>
       )}
 
+      {/* Execution Status Filters */}
+      <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
+        <div className="flex flex-wrap items-center gap-2">
+          <span className="text-sm font-medium" style={{ color: "var(--text-secondary)" }}>
+            Filter:
+          </span>
+          <FilterButton
+            active={executionFilter === "all"}
+            onClick={() => setExecutionFilter("all")}
+            count={taskCounts.all}
+            label="All"
+          />
+          <FilterButton
+            active={executionFilter === "running"}
+            onClick={() => setExecutionFilter("running")}
+            count={taskCounts.running}
+            label="Running"
+            icon={<Play className="h-3 w-3" />}
+            color="var(--info)"
+          />
+          <FilterButton
+            active={executionFilter === "success"}
+            onClick={() => setExecutionFilter("success")}
+            count={taskCounts.success}
+            label="Success"
+            icon={<CheckCircle className="h-3 w-3" />}
+            color="var(--success)"
+          />
+          <FilterButton
+            active={executionFilter === "error"}
+            onClick={() => setExecutionFilter("error")}
+            count={taskCounts.error}
+            label="Error"
+            icon={<XCircle className="h-3 w-3" />}
+            color="var(--error)"
+          />
+          <FilterButton
+            active={executionFilter === "pending"}
+            onClick={() => setExecutionFilter("pending")}
+            count={taskCounts.pending}
+            label="Pending"
+            icon={<Clock className="h-3 w-3" />}
+            color="var(--warning)"
+          />
+          <FilterButton
+            active={executionFilter === "none"}
+            onClick={() => setExecutionFilter("none")}
+            count={taskCounts.none}
+            label="Manual"
+            icon={<AlertCircle className="h-3 w-3" />}
+            color="var(--text-muted)"
+          />
+        </div>
+
+        {/* Cron Jobs Link */}
+        <Link
+          href="/cron"
+          className="flex items-center gap-2 rounded-lg px-3 py-1.5 text-sm font-medium transition-colors hover:opacity-80"
+          style={{
+            backgroundColor: "var(--surface-elevated)",
+            color: "var(--text-secondary)",
+            border: "1px solid var(--border)",
+          }}
+        >
+          <Calendar className="h-4 w-4" />
+          Cron Jobs
+        </Link>
+      </div>
+
       <KanbanBoard
         columns={columns}
-        tasks={tasks}
+        tasks={filteredTasks}
         projects={projects}
         selectedProjectId={selectedProjectId}
         onProjectFilterChange={setSelectedProjectId}
@@ -365,61 +456,47 @@ export default function KanbanPage() {
         onClose={() => setOrphanModalOpen(false)}
         onReassigned={fetchData}
       />
-
-      {/* Quick Links to Mission Control */}
-      <div
-        className="mt-6 rounded-xl p-4"
-        style={{ backgroundColor: "var(--card)", border: "1px solid var(--border)" }}
-      >
-        <h3
-          className="mb-3 text-sm font-semibold"
-          style={{ color: "var(--text-muted)" }}
-        >
-          Mission Control
-        </h3>
-        <div className="grid grid-cols-2 gap-2 md:grid-cols-4">
-          <Link
-            href="/mission"
-            className="flex items-center gap-2 rounded-lg p-2 transition-colors hover:opacity-80"
-            style={{ backgroundColor: "var(--surface-elevated)" }}
-          >
-            <Target className="h-4 w-4" style={{ color: "var(--accent)" }} />
-            <span className="text-sm" style={{ color: "var(--text-primary)" }}>
-              Mission
-            </span>
-          </Link>
-          <Link
-            href="/projects"
-            className="flex items-center gap-2 rounded-lg p-2 transition-colors hover:opacity-80"
-            style={{ backgroundColor: "var(--surface-elevated)" }}
-          >
-            <Briefcase className="h-4 w-4" style={{ color: "var(--info)" }} />
-            <span className="text-sm" style={{ color: "var(--text-primary)" }}>
-              Projects
-            </span>
-          </Link>
-          <Link
-            href="/journal"
-            className="flex items-center gap-2 rounded-lg p-2 transition-colors hover:opacity-80"
-            style={{ backgroundColor: "var(--surface-elevated)" }}
-          >
-            <BookOpen className="h-4 w-4" style={{ color: "var(--success)" }} />
-            <span className="text-sm" style={{ color: "var(--text-primary)" }}>
-              Journal
-            </span>
-          </Link>
-          <Link
-            href="/autonomy"
-            className="flex items-center gap-2 rounded-lg p-2 transition-colors hover:opacity-80"
-            style={{ backgroundColor: "var(--surface-elevated)" }}
-          >
-            <Rocket className="h-4 w-4" style={{ color: "var(--warning)" }} />
-            <span className="text-sm" style={{ color: "var(--text-primary)" }}>
-              Autonomy
-            </span>
-          </Link>
-        </div>
-      </div>
     </div>
+  );
+}
+
+// Filter button component
+function FilterButton({
+  active,
+  onClick,
+  count,
+  label,
+  icon,
+  color = "var(--accent)",
+}: {
+  active: boolean;
+  onClick: () => void;
+  count: number;
+  label: string;
+  icon?: React.ReactNode;
+  color?: string;
+}) {
+  return (
+    <button
+      onClick={onClick}
+      className="flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-sm font-medium transition-all"
+      style={{
+        backgroundColor: active ? color : "transparent",
+        color: active ? "white" : "var(--text-secondary)",
+        border: `1px solid ${active ? color : "var(--border)"}`,
+      }}
+    >
+      {icon}
+      {label}
+      <span
+        className="ml-1 rounded-full px-1.5 py-0.5 text-xs"
+        style={{
+          backgroundColor: active ? "rgba(255,255,255,0.2)" : "var(--surface-elevated)",
+          color: active ? "white" : "var(--text-muted)",
+        }}
+      >
+        {count}
+      </span>
+    </button>
   );
 }

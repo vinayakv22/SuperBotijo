@@ -8,7 +8,6 @@ import { Notepad } from "@/components/Notepad";
 import { MoodWidget } from "@/components/MoodWidget";
 import { SuggestionsPanel } from "@/components/SuggestionsPanel";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
-import { MissionCard } from "@/components/MissionCard";
 import { PageHeader } from "@/components/PageHeader";
 import { useI18n } from "@/i18n/provider";
 import {
@@ -26,11 +25,8 @@ import {
   Zap,
   Server,
   Terminal,
-  Home,
 } from "lucide-react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
-import type { Mission } from "@/lib/mission-types";
 
 interface Stats {
   total: number;
@@ -52,18 +48,15 @@ interface Agent {
 }
 
 export default function DashboardPage() {
-  const router = useRouter();
   const { t } = useI18n();
   const [stats, setStats] = useState<Stats>({ total: 0, today: 0, success: 0, error: 0, byType: {} });
   const [agents, setAgents] = useState<Agent[]>([]);
-  const [mission, setMission] = useState<Mission | null>(null);
 
   useEffect(() => {
     Promise.all([
       fetch("/api/activities/stats").then(r => r.json()),
       fetch("/api/agents").then(r => r.json()),
-      fetch("/api/mission").then(r => r.json()),
-    ]).then(([actStats, agentsData, missionData]) => {
+    ]).then(([actStats, agentsData]) => {
       setStats({
         total: actStats.total || 0,
         today: actStats.today || 0,
@@ -72,13 +65,8 @@ export default function DashboardPage() {
         byType: actStats.byType || {},
       });
       setAgents(agentsData.agents || []);
-      setMission(missionData.mission || null);
     }).catch(console.error);
   }, []);
-
-  const handleMissionEdit = () => {
-    router.push("/mission");
-  };
 
   return (
     <ErrorBoundary>
@@ -125,11 +113,6 @@ export default function DashboardPage() {
         <div className="lg:col-span-1">
           <WeatherWidget />
         </div>
-      </div>
-
-      {/* Mission Card */}
-      <div className="mb-4 md:mb-6">
-        <MissionCard mission={mission} onEdit={handleMissionEdit} />
       </div>
 
       {/* Multi-Agent Status */}
@@ -258,13 +241,6 @@ export default function DashboardPage() {
                 {t("dashboard.recentActivity")}
               </h2>
             </div>
-            <a
-              href="/activity"
-              className="text-sm font-medium"
-              style={{ color: 'var(--accent)' }}
-            >
-              {t("dashboard.viewAll")}
-            </a>
           </div>
           <div className="p-0">
             <ActivityFeed limit={5} />

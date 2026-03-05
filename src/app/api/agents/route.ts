@@ -6,13 +6,21 @@ import { registerAgent, getAgents, getAgentById, pauseAgent, resumeAgent } from 
 
 // GET /api/agents - List all agents
 export async function GET(request: NextRequest) {
-  const result = await getAgents();
+  try {
+    const result = await getAgents();
 
-  if (!result.success) {
-    return NextResponse.json({ error: result.error }, { status: 500 });
+    if (!result.success) {
+      return NextResponse.json({ error: result.error }, { status: 500 });
+    }
+
+    return NextResponse.json({ agents: result.data || [] });
+  } catch (error) {
+    console.error('[api/agents] GET error:', error);
+    return NextResponse.json(
+      { error: error instanceof Error ? error.message : 'Failed to get agents' },
+      { status: 500 }
+    );
   }
-
-  return NextResponse.json({ agents: result.data });
 }
 
 // POST /api/agents - Create a new agent

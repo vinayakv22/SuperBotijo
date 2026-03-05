@@ -2,7 +2,6 @@ import {
   LayoutDashboard,
   Users,
   Bot,
-  Gamepad2,
   Target,
   LayoutGrid,
   Briefcase,
@@ -65,7 +64,7 @@ export type CommandGroup =
 
 /**
  * Navigation commands derived from Sidebar navGroups
- * Contains all 27 dashboard pages organized by group
+ * Contains all dashboard pages organized by group
  */
 export const NAV_COMMANDS: Command[] = [
   // Main
@@ -93,56 +92,6 @@ export const NAV_COMMANDS: Command[] = [
     group: "Main",
     keywords: ["subagentes", "workers"],
   },
-  {
-    id: "nav-office",
-    label: "Office",
-    icon: Gamepad2,
-    href: "/office",
-    group: "Main",
-    keywords: ["3d", "oficina", "game"],
-  },
-
-  // Mission Control
-  {
-    id: "nav-mission",
-    label: "Mission",
-    icon: Target,
-    href: "/mission",
-    group: "Mission Control",
-    keywords: ["mision", "objetivo", "goals"],
-  },
-  {
-    id: "nav-kanban",
-    label: "Kanban",
-    icon: LayoutGrid,
-    href: "/kanban",
-    group: "Mission Control",
-    keywords: ["board", "tablero", "tasks"],
-  },
-  {
-    id: "nav-projects",
-    label: "Projects",
-    icon: Briefcase,
-    href: "/projects",
-    group: "Mission Control",
-    keywords: ["proyectos", "folders"],
-  },
-  {
-    id: "nav-journal",
-    label: "Journal",
-    icon: BookOpen,
-    href: "/journal",
-    group: "Mission Control",
-    keywords: ["diario", "notes", "notas"],
-  },
-  {
-    id: "nav-autonomy",
-    label: "Autonomy",
-    icon: Rocket,
-    href: "/autonomy",
-    group: "Mission Control",
-    keywords: ["autonomia", "auto", "automation"],
-  },
 
   // Data
   {
@@ -168,30 +117,6 @@ export const NAV_COMMANDS: Command[] = [
     href: "/sessions",
     group: "Data",
     keywords: ["sesiones", "history", "historial"],
-  },
-  {
-    id: "nav-activity",
-    label: "Activity",
-    icon: Activity,
-    href: "/activity",
-    group: "Data",
-    keywords: ["actividad", "events", "eventos"],
-  },
-  {
-    id: "nav-calendar",
-    label: "Calendar",
-    icon: Calendar,
-    href: "/calendar",
-    group: "Data",
-    keywords: ["calendario", "events", "schedule"],
-  },
-  {
-    id: "nav-notifications",
-    label: "Notifications",
-    icon: Bell,
-    href: "/notifications",
-    group: "Data",
-    keywords: ["notificaciones", "alerts", "alertas"],
   },
 
   // Analytics
@@ -279,8 +204,6 @@ export const NAV_COMMANDS: Command[] = [
     group: "System",
     keywords: ["registros", "debug", "console"],
   },
-
-  // Extra pages (Settings, About)
   {
     id: "nav-settings",
     label: "Settings",
@@ -289,13 +212,15 @@ export const NAV_COMMANDS: Command[] = [
     group: "System",
     keywords: ["configuracion", "prefs", "ajustes"],
   },
+
+  // Mission Control (simplified - only Kanban remains valuable)
   {
-    id: "nav-about",
-    label: "About",
-    icon: User,
-    href: "/about",
-    group: "System",
-    keywords: ["acerca", "info", "perfil"],
+    id: "nav-kanban",
+    label: "Kanban",
+    icon: LayoutGrid,
+    href: "/kanban",
+    group: "Mission Control",
+    keywords: ["board", "tablero", "tasks"],
   },
 ];
 
@@ -303,15 +228,6 @@ export const NAV_COMMANDS: Command[] = [
  * Quick action commands for common operations
  */
 export const QUICK_ACTIONS: Command[] = [
-  {
-    id: "action-new-journal",
-    label: "New Journal Entry",
-    icon: Plus,
-    action: "new-journal",
-    href: "/journal?new=true",
-    group: "Quick Actions",
-    keywords: ["nueva", "entrada", "diario", "create"],
-  },
   {
     id: "action-new-session",
     label: "New Session",

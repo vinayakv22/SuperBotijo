@@ -45,7 +45,7 @@
   "dock": {
     "dashboard": "Dashboard",
     "agents": "Agents",
-    "office": "Office",
+    "kanban": "Kanban",
     "memory": "Memory",
     "files": "Files",
     "analytics": "Analytics",
@@ -62,11 +62,11 @@
     },
     "agents": {
       "title": "Agents",
-      "description": "View and manage your AI agents. See hierarchy, communication patterns, and spawn new subagents."
+      "description": "View and manage your AI agents. See hierarchy and spawn new subagents."
     },
-    "office": {
-      "title": "3D Office",
-      "description": "Interactive 3D visualization of your agent workspace. A fun way to see your agents in action."
+    "kanban": {
+      "title": "Kanban",
+      "description": "Task board for managing agent work. Create, organize, and track tasks across columns."
     },
     "memory": {
       "title": "Memory Browser",
@@ -153,13 +153,7 @@
     "cards": "Agent Cards",
     "organigrama": "Organigrama",
     "hierarchy": "Agent Hierarchy",
-    "hierarchySubtitle": "Visualization of agent communication allowances",
-    "communication": "Communication",
-    "communicationGraph": "Agent Communication Graph",
-    "communicationSubtitle": "Real-time communication flow between agents",
-    "noCommData": "No communication data found",
-    "noCommDataHint": "Run some sessions with subagents to see the communication graph",
-    "loadingGraph": "Loading communication graph...",
+    "hierarchySubtitle": "Visualization of agent spawn permissions",
     "never": "Never",
     "justNow": "Just now",
     "minutesAgo": "{count}m ago",
@@ -171,7 +165,20 @@
     "dmPolicy": "DM Policy",
     "canSpawn": "Can spawn subagents ({count})",
     "lastActivity": "Last activity",
-    "active": "active"
+    "active": "active",
+    "tokens": "Tokens",
+    "sessions": "Sessions",
+    "energy": "Energy",
+    "currentTask": "Current task",
+    "streak": "Streak",
+    "status": {
+      "working": "Working",
+      "online": "Online",
+      "idle": "Idle",
+      "paused": "Paused",
+      "error": "Error",
+      "offline": "Offline"
+    }
   },
   "cron": {
     "title": "Cron Manager",
@@ -308,8 +315,13 @@
     "tabs": {
       "system": "System",
       "config": "Config",
-      "pricing": "Pricing"
+      "pricing": "Pricing",
+      "about": "About"
     }
+  },
+  "about": {
+    "title": "About",
+    "description": "Learn more about your AI assistant"
   },
   "system": {
     "title": "System Monitor",

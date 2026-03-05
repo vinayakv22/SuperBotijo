@@ -1,33 +1,37 @@
 /**
  * Agent Operations - Business logic for agent management
  */
-import type { OperationResult } from './index';
-import { getActivities } from '@/lib/activities-db';
-import { readFileSync, existsSync } from 'fs';
-import { join } from 'path';
+import type { OperationResult } from "./index";
+import { getActivities } from "@/lib/activities-db"
+import { getAgentDefaults } from "@/lib/agent-auto-config"
+import { readFileSync, existsSync } from "fs";
+import { join } from "path";
 
-const OPENCLAW_DIR = process.env.OPENCLAW_DIR || '/home/daniel/.openclaw';
+const OPENCLAW_DIR = process.env.OPENCLAW_DIR || "/home/daniel/.openclaw";
 
 export interface AgentInfo {
   id: string;
   name: string;
   emoji: string;
   color: string;
-  status: 'working' | 'idle' | 'error' | 'paused' | 'online' | 'offline';
+  status: "working" | "idle" | "error" | "paused" | "online" | "offline";
   model: string;
+  workspace?: string;
   currentTask?: string;
   lastActivity?: string;
   tokensUsed: number;
   sessionCount: number;
+  activeSessions: number;
   botToken?: string;
   allowAgents?: string[];
   allowAgentsDetails?: { id: string; name: string; emoji: string; color: string }[];
   dmPolicy?: string;
+  mood?: AgentMood;
 }
 
 export interface AgentMood {
   agentId: string;
-  mood: 'productive' | 'busy' | 'frustrated' | 'content' | 'tired';
+  mood: "productive" | "busy" | "frustrated" | "content" | "tired";
   emoji: string;
   streak: number;
   energyLevel: number;
@@ -38,42 +42,33 @@ export interface AgentMood {
 const agentRegistry = new Map<string, AgentInfo>();
 const agentMoods = new Map<string, AgentMood>();
 
-// Default agent config
-const AGENT_DEFAULTS: Record<string, { emoji: string; color: string }> = {
-  boti: { emoji: '🤖', color: '#3b82f6' },
-  opencode: { emoji: '⚡', color: '#8b5cf6' },
-  memo: { emoji: '🧠', color: '#10b981' },
-  escapeitor: { emoji: '🔐', color: '#f59e0b' },
-  superbotijo: { emoji: '🫙', color: '#6366f1' },
-};
-
 /**
  * Load agents from openclaw.json configuration
  */
 function loadAgentsFromConfig(): AgentInfo[] {
-  const configPath = join(OPENCLAW_DIR, 'openclaw.json');
-  
+  const configPath = join(OPENCLAW_DIR, "openclaw.json");
+
   if (!existsSync(configPath)) {
-    console.warn('[agent-ops] openclaw.json not found at', configPath);
+    console.warn("[agent-ops] openclaw.json not found at", configPath);
     return [];
   }
-  
+
   try {
-    const config = JSON.parse(readFileSync(configPath, 'utf-8'));
+    const config = JSON.parse(readFileSync(configPath, "utf-8"));
     const agentsList = config.agents?.list || [];
-    
-    return agentsList.map((agent: { 
-      id: string; 
-      name?: string; 
-      model?: string;
+
+    return agentsList.map((agent: {
+      id: string;
+      name?: string
+      model?: string
       subagents?: { allowAgents?: string[] };
     }) => {
-      const defaults = AGENT_DEFAULTS[agent.id] || { emoji: '🤖', color: '#6b7280' };
+      const defaults = getAgentDefaults(agent.id, agent.name);
       const allowAgents = agent.subagents?.allowAgents || [];
-      
-      // Build allowAgentsDetails
+
+      // Build allowAgentsDetails using auto-config
       const allowAgentsDetails = allowAgents.map((subId: string) => {
-        const subDefaults = AGENT_DEFAULTS[subId] || { emoji: '🤖', color: '#6b7280' };
+        const subDefaults = getAgentDefaults(subId, subId);
         return {
           id: subId,
           name: subId,
@@ -81,22 +76,24 @@ function loadAgentsFromConfig(): AgentInfo[] {
           color: subDefaults.color,
         };
       });
-      
+
       return {
         id: agent.id,
         name: agent.name || agent.id,
         emoji: defaults.emoji,
         color: defaults.color,
-        status: 'offline' as const,
-        model: agent.model || 'unknown',
+        status: "offline" as const,
+        model: agent.model || "unknown",
         tokensUsed: 0,
         sessionCount: 0,
+        activeSessions: 0,
+        workspace: join(OPENCLAW_DIR, "workspace", agent.id),
         allowAgents,
         allowAgentsDetails,
       };
     });
   } catch (error) {
-    console.error('[agent-ops] Error loading agents from config:', error);
+    console.error("[agent-ops] Error loading agents from config:", error);
     return [];
   }
 }
@@ -108,22 +105,68 @@ export async function getAgents(): Promise<OperationResult<AgentInfo[]>> {
   try {
     // Load agents from openclaw.json
     const configAgents = loadAgentsFromConfig();
-    
+
     // Update registry with config agents
     for (const agent of configAgents) {
       if (!agentRegistry.has(agent.id)) {
         agentRegistry.set(agent.id, agent);
       }
     }
-    
-    return {
-      success: true,
-      data: Array.from(agentRegistry.values()),
-    };
+
+    // Get activities for each agent to calculate stats
+    const activitiesResult = getActivities({ limit: 1000, sort: "newest" });
+    const recentActivities = activitiesResult.activities;
+
+    // Calculate stats for each agent
+    for (const agent of configAgents) {
+      const agentActivities = recentActivities.filter(
+        (a) => a.agent === agent.id || (a.agent?.toLowerCase().includes(agent.id.toLowerCase()))
+      );
+
+      // Session count = total activities
+      agent.sessionCount = agentActivities.length;
+
+      // Active sessions = running status
+      agent.activeSessions = agentActivities.filter(
+        (a) => a.status === "running"
+      ).length;
+
+      // Tokens used = sum of tokens_used
+      agent.tokensUsed = agentActivities.reduce(
+        (sum, a) => sum + (a.tokens_used || 0),
+        0
+      );
+
+      // Last activity
+      agent.lastActivity =
+        agentActivities.length > 0
+          ? agentActivities[0].timestamp
+          : undefined;
+
+      // Determine status based on activities
+      if (agent.activeSessions > 0) {
+        agent.status = "working";
+      } else if (agentActivities.length > 0) {
+        const lastActivityTime = new Date(agentActivities[0].timestamp).getTime();
+        const fiveMinutesAgo = Date.now() - 5 * 60 * 1000;
+        agent.status = lastActivityTime > fiveMinutesAgo ? "online" : "idle";
+      }
+
+      // Get mood (cached or calculate)
+      const moodResult = await getAgentMood(agent.id);
+      if (moodResult.success && moodResult.data) {
+        agent.mood = moodResult.data;
+      }
+
+      // Update registry
+      agentRegistry.set(agent.id, agent);
+    }
+
+    return { success: true, data: [...agentRegistry.values()] };
   } catch (error) {
     return {
       success: false,
-      error: error instanceof Error ? error.message : 'Failed to get agents',
+      error: error instanceof Error ? error.message : "Failed to get agents",
     };
   }
 }
@@ -131,19 +174,25 @@ export async function getAgents(): Promise<OperationResult<AgentInfo[]>> {
 /**
  * Get a single agent by ID
  */
-export async function getAgentById(id: string): Promise<OperationResult<AgentInfo>> {
+export async function getAgentById(
+  id: string
+): Promise<OperationResult<AgentInfo>> {
   try {
-    const agent = agentRegistry.get(id);
-    
+    const agents = await getAgents();
+    if (!agents.success) {
+      return { success: false, error: "No agents found" };
+    }
+
+    const agent = agents.data?.find((a) => a.id === id);
     if (!agent) {
-      return { success: false, error: 'Agent not found' };
+      return { success: false, error: "Agent not found" };
     }
 
     return { success: true, data: agent };
   } catch (error) {
     return {
       success: false,
-      error: error instanceof Error ? error.message : 'Failed to get agent',
+      error: error instanceof Error ? error.message : "Failed to get agent",
     };
   }
 }
@@ -153,14 +202,14 @@ export async function getAgentById(id: string): Promise<OperationResult<AgentInf
  */
 export async function updateAgentStatus(
   id: string,
-  status: AgentInfo['status'],
+  status: AgentInfo["status"],
   currentTask?: string
 ): Promise<OperationResult<AgentInfo>> {
   try {
     const agent = agentRegistry.get(id);
-    
+
     if (!agent) {
-      return { success: false, error: 'Agent not found' };
+      return { success: false, error: "Agent not found" };
     }
 
     agent.status = status;
@@ -173,7 +222,7 @@ export async function updateAgentStatus(
   } catch (error) {
     return {
       success: false,
-      error: error instanceof Error ? error.message : 'Failed to update status',
+      error: error instanceof Error ? error.message : "Failed to update status",
     };
   }
 }
@@ -183,20 +232,20 @@ export async function updateAgentStatus(
  */
 export async function pauseAgent(id: string): Promise<OperationResult> {
   try {
-    const result = await updateAgentStatus(id, 'paused');
-    
+    const result = await updateAgentStatus(id, "paused");
+
     if (!result.success) {
       return { success: false, error: result.error };
     }
 
     // Log the pause
     console.log(`[agent-ops] Agent ${id} paused at ${new Date().toISOString()}`);
-    
+
     return { success: true };
   } catch (error) {
     return {
       success: false,
-      error: error instanceof Error ? error.message : 'Failed to pause agent',
+      error: error instanceof Error ? error.message : "Failed to pause agent",
     };
   }
 }
@@ -207,21 +256,21 @@ export async function pauseAgent(id: string): Promise<OperationResult> {
 export async function resumeAgent(id: string): Promise<OperationResult> {
   try {
     const agent = agentRegistry.get(id);
-    
+
     if (!agent) {
-      return { success: false, error: 'Agent not found' };
+      return { success: false, error: "Agent not found" };
     }
 
-    if (agent.status !== 'paused') {
-      return { success: false, error: 'Agent is not paused' };
+    if (agent.status !== "paused") {
+      return { success: false, error: "Agent is not paused" };
     }
 
-    const result = await updateAgentStatus(id, 'idle');
+    const result = await updateAgentStatus(id, "idle");
     return { success: result.success };
   } catch (error) {
     return {
       success: false,
-      error: error instanceof Error ? error.message : 'Failed to resume agent',
+      error: error instanceof Error ? error.message : "Failed to resume agent",
     };
   }
 }
@@ -229,64 +278,63 @@ export async function resumeAgent(id: string): Promise<OperationResult> {
 /**
  * Calculate agent mood based on recent activity
  */
-export async function calculateAgentMood(id: string): Promise<OperationResult<AgentMood>> {
+export async function calculateAgentMood(
+  id: string
+): Promise<OperationResult<AgentMood>> {
   try {
     const agent = agentRegistry.get(id);
-    
+
     if (!agent) {
-      return { success: false, error: 'Agent not found' };
+      return { success: false, error: "Agent not found" };
     }
 
     // Get recent activities for this agent
-    const result = getActivities({ limit: 100, sort: 'newest' });
-    const recentActivities = result.activities.slice(0, 50);
-
-    // Calculate metrics
-    const now = Date.now();
-    const hourAgo = now - 60 * 60 * 1000;
-    const recentHour = recentActivities.filter(
-      a => new Date(a.timestamp).getTime() > hourAgo
+    const result = getActivities({ limit: 100, sort: "newest" });
+    const recentActivities = result.activities.filter(
+      (a) => a.agent === id || a.agent?.toLowerCase().includes(id)
     );
 
-    const errorCount = recentHour.filter(a => a.status === 'error').length;
-    const successCount = recentHour.filter(a => a.status === 'success').length;
-    const totalTokens = recentHour.reduce((sum, a) => sum + (a.tokens_used || 0), 0);
+    // Calculate mood based on activity patterns
+    let activityCount = recentActivities.length;
+    let errorCount = recentActivities.filter((a) => a.status === "error").length;
+    let successCount = recentActivities.filter((a) => a.status === "success").length;
+
+    let totalTokens = recentActivities.reduce((sum, a) => sum + (a.tokens_used || 0), 0);
 
     // Determine mood
-    let mood: AgentMood['mood'];
+    let mood: AgentMood["mood"];
     let emoji: string;
+    let streak: number;
+    let energyLevel: number;
 
-    if (errorCount > 3) {
-      mood = 'frustrated';
-      emoji = '😤';
-    } else if (recentHour.length > 20) {
-      mood = 'busy';
-      emoji = '🔥';
-    } else if (totalTokens > 50000) {
-      mood = 'tired';
-      emoji = '😴';
-    } else if (successCount > 5 && errorCount === 0) {
-      mood = 'productive';
-      emoji = '🚀';
+    if (errorCount > successCount) {
+      mood = "frustrated";
+      emoji = "😤";
+      streak = 0;
+      energyLevel = 30;
+    } else if (activityCount > 5) {
+      mood = "busy";
+      emoji = "🏃";
+      streak = successCount;
+      energyLevel = 70;
+    } else if (activityCount >= 3) {
+      mood = "productive";
+      emoji = "💪";
+      streak = activityCount;
+      energyLevel = 90;
     } else {
-      mood = 'content';
-      emoji = '😊';
+      mood = "content";
+      emoji = "😊";
+      streak = 1;
+      energyLevel = 60;
     }
-
-    // Calculate energy level (0-100)
-    const energyLevel = Math.max(0, Math.min(100, 
-      100 - (errorCount * 10) - (totalTokens / 1000)
-    ));
-
-    // Calculate streak (consecutive successful days - simplified)
-    const streak = successCount > 0 ? Math.min(successCount, 7) : 0;
 
     const agentMood: AgentMood = {
       agentId: id,
       mood,
       emoji,
       streak,
-      energyLevel: Math.round(energyLevel),
+      energyLevel,
       lastCalculated: new Date().toISOString(),
     };
 
@@ -296,7 +344,7 @@ export async function calculateAgentMood(id: string): Promise<OperationResult<Ag
   } catch (error) {
     return {
       success: false,
-      error: error instanceof Error ? error.message : 'Failed to calculate mood',
+      error: error instanceof Error ? error.message : "Failed to calculate mood",
     };
   }
 }
@@ -310,7 +358,7 @@ export async function getAgentMood(
 ): Promise<OperationResult<AgentMood>> {
   try {
     const cached = agentMoods.get(id);
-    
+
     // Return cached if fresh (< 5 minutes old)
     if (!forceRefresh && cached) {
       const cacheAge = Date.now() - new Date(cached.lastCalculated).getTime();
@@ -323,7 +371,7 @@ export async function getAgentMood(
   } catch (error) {
     return {
       success: false,
-      error: error instanceof Error ? error.message : 'Failed to get mood',
+      error: error instanceof Error ? error.message : "Failed to get mood",
     };
   }
 }
@@ -338,18 +386,21 @@ export async function registerAgent(
 ): Promise<OperationResult<AgentInfo>> {
   try {
     if (agentRegistry.has(id)) {
-      return { success: false, error: 'Agent already exists' };
+      return { success: false, error: "Agent already exists" };
     }
 
+    const defaults = getAgentDefaults(id, name);
     const agent: AgentInfo = {
       id,
       name,
       model,
-      emoji: "🤖",
-      color: "#3b82f6",
+      emoji: defaults.emoji,
+      color: defaults.color,
       status: "idle",
       tokensUsed: 0,
       sessionCount: 0,
+      activeSessions: 0,
+      workspace: join(OPENCLAW_DIR, "workspace", id),
     };
 
     agentRegistry.set(id, agent);
@@ -358,23 +409,23 @@ export async function registerAgent(
   } catch (error) {
     return {
       success: false,
-      error: error instanceof Error ? error.message : 'Failed to register agent',
+      error: error instanceof Error ? error.message : "Failed to register agent",
     };
   }
 }
 
 /**
- * Unregister an agent
+ * unregister an agent
  */
 export async function unregisterAgent(id: string): Promise<OperationResult> {
   try {
     if (!agentRegistry.has(id)) {
-      return { success: false, error: 'Agent not found' };
+      return { success: false, error: "Agent not found" };
     }
 
     // Don't allow unregistering the main agent
-    if (id === 'superbotijo') {
-      return { success: false, error: 'Cannot unregister main agent' };
+    if (id === "superbotijo") {
+      return { success: false, error: "Cannot unregister main agent" };
     }
 
     agentRegistry.delete(id);
@@ -384,7 +435,7 @@ export async function unregisterAgent(id: string): Promise<OperationResult> {
   } catch (error) {
     return {
       success: false,
-      error: error instanceof Error ? error.message : 'Failed to unregister agent',
+      error: error instanceof Error ? error.message : "Failed to unregister agent",
     };
   }
 }
