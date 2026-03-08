@@ -8,10 +8,37 @@ A real-time dashboard and control center for [OpenClaw](https://openclaw.ai) AI 
 
 ---
 
+## 🚀 Quick Start with Docker
+
+Deploy SuperBotijo in minutes using Docker:
+
+```bash
+# Pull the image
+docker pull ghcr.io/vinayakv22/superbotijo:latest
+
+# Create configuration
+curl -o docker-compose.yml https://raw.githubusercontent.com/vinayakv22/SuperBotijo/main/docker-compose.yml
+curl -o .env https://raw.githubusercontent.com/vinayakv22/SuperBotijo/main/.env.docker.example
+
+# Generate secrets and configure
+echo "ADMIN_PASSWORD=$(openssl rand -base64 24)" >> .env
+echo "AUTH_SECRET=$(openssl rand -base64 32)" >> .env
+
+# Start SuperBotijo
+docker-compose up -d
+```
+
+Access at **http://localhost:3000** • Login with your `ADMIN_PASSWORD`
+
+📦 **CasaOS users:** See [DOCKER.md](./DOCKER.md#method-3-casaos-integration) for one-click installation
+
+---
+
 ## Quick Links
 
 | Resource | Description |
 |----------|-------------|
+| [DOCKER.md](./DOCKER.md) | Docker deployment guide (recommended) |
 | [ARCHITECTURE.md](./ARCHITECTURE.md) | Complete technical documentation |
 | [AGENTS.md](./AGENTS.md) | AI coding agent instructions |
 | [docs/COST-TRACKING.md](./docs/COST-TRACKING.md) | Cost tracking guide |
@@ -225,7 +252,33 @@ npm run build && npm start  # Production
 
 ## Production Deployment
 
-### PM2 (recommended)
+### Docker (Recommended for Easy Deployment)
+
+The easiest way to deploy SuperBotijo is using Docker:
+
+```bash
+# 1. Pull the official image
+docker pull ghcr.io/vinayakv22/superbotijo:latest
+
+# 2. Create environment file
+cat > .env << EOF
+ADMIN_PASSWORD=$(openssl rand -base64 24)
+AUTH_SECRET=$(openssl rand -base64 32)
+OPENCLAW_DIR=/root/.openclaw
+EOF
+
+# 3. Run with Docker Compose
+curl -o docker-compose.yml https://raw.githubusercontent.com/vinayakv22/SuperBotijo/main/docker-compose.yml
+docker-compose up -d
+
+# Access at http://localhost:3000
+```
+
+**CasaOS Integration:** SuperBotijo includes a CasaOS-optimized configuration for one-click installation. See [DOCKER.md](./DOCKER.md) for details.
+
+📖 **Full Docker documentation:** [DOCKER.md](./DOCKER.md)
+
+### PM2
 
 ```bash
 npm run build

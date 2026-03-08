@@ -1,0 +1,76 @@
+version: "3.8"
+
+services:
+  superbotijo:
+    image: ghcr.io/vinayakv22/superbotijo:latest
+    container_name: superbotijo
+    restart: unless-stopped
+
+    # Network configuration
+    ports:
+      - "3000:3000"
+
+    # Environment variables
+    environment:
+      # Required - Authentication
+      - ADMIN_PASSWORD=${ADMIN_PASSWORD}
+      - AUTH_SECRET=${AUTH_SECRET}
+
+      # Required - OpenClaw paths (adjust to your setup)
+      - OPENCLAW_DIR=${OPENCLAW_DIR:-/openclaw}
+      - OPENCLAW_WORKSPACE=${OPENCLAW_WORKSPACE:-/openclaw/workspace}
+
+      # Optional - Weather widget
+      - WEATHER_LAT=${WEATHER_LAT:-40.4168}
+      - WEATHER_LON=${WEATHER_LON:-3.7038}
+      - WEATHER_CITY=${WEATHER_CITY:-Madrid}
+      - WEATHER_TIMEZONE=${WEATHER_TIMEZONE:-Europe/Madrid}
+
+      # Optional - Branding (public, safe to set)
+      - NEXT_PUBLIC_AGENT_NAME=${NEXT_PUBLIC_AGENT_NAME:-SuperBotijo}
+      - NEXT_PUBLIC_AGENT_EMOJI=${NEXT_PUBLIC_AGENT_EMOJI:-🫙}
+      - NEXT_PUBLIC_AGENT_DESCRIPTION=${NEXT_PUBLIC_AGENT_DESCRIPTION:-Your AI co-pilot, powered by OpenClaw}
+      - NEXT_PUBLIC_AGENT_LOCATION=${NEXT_PUBLIC_AGENT_LOCATION:-}
+      - NEXT_PUBLIC_BIRTH_DATE=${NEXT_PUBLIC_BIRTH_DATE:-}
+      - NEXT_PUBLIC_AGENT_AVATAR=${NEXT_PUBLIC_AGENT_AVATAR:-}
+      - NEXT_PUBLIC_OWNER_USERNAME=${NEXT_PUBLIC_OWNER_USERNAME:-your-username}
+      - NEXT_PUBLIC_OWNER_EMAIL=${NEXT_PUBLIC_OWNER_EMAIL:-your-email@example.com}
+      - NEXT_PUBLIC_OWNER_COLLAB_EMAIL=${NEXT_PUBLIC_OWNER_COLLAB_EMAIL:-collabs@example.com}
+      - NEXT_PUBLIC_TWITTER_HANDLE=${NEXT_PUBLIC_TWITTER_HANDLE:-@username}
+      - NEXT_PUBLIC_COMPANY_NAME=${NEXT_PUBLIC_COMPANY_NAME:-SUPERBOTIJO, INC.}
+      - NEXT_PUBLIC_APP_TITLE=${NEXT_PUBLIC_APP_TITLE:-SuperBotijo}
+
+      # Optional - Agent Kanban Integration
+      - KANBAN_AGENT_KEYS=${KANBAN_AGENT_KEYS:-}
+
+      # Production mode
+      - NODE_ENV=production
+
+    # Volume mounts
+    volumes:
+      # OpenClaw directory (read-write access to agent data)
+      # IMPORTANT: Adjust this path to match your OpenClaw installation
+      - ${OPENCLAW_DIR:-/root/.openclaw}:/openclaw:rw
+
+      # SuperBotijo data directory (SQLite databases and JSON files)
+      - superbotijo-data:/app/data
+
+    # Health check
+    healthcheck:
+      test: ["CMD", "node", "-e", "require('http').get('http://localhost:3000/api/health', (r) => {process.exit(r.statusCode === 200 ? 0 : 1)})"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+    # Labels for better organization
+    labels:
+      - "com.superbotijo.description=SuperBotijo - OpenClaw Dashboard"
+      - "com.superbotijo.version=1.0.0"
+
+# Named volumes
+volumes:
+  superbotijo-data:
+    driver: local
+    labels:
+      - "com.superbotijo.description=SuperBotijo application data (SQLite databases and JSON files)"
