@@ -77,8 +77,8 @@ jobs:
             type=ref,event=branch
             # Tag with PR number for pull requests
             type=ref,event=pr
-            # Tag with commit SHA (short)
-            type=sha,prefix={{branch}}-
+            # Tag with commit SHA (short) for branch builds only
+            type=sha,prefix={{branch}}-,enable=${{ github.event_name != 'pull_request' }}
 
       - name: Build and push Docker image
         uses: docker/build-push-action@v5
